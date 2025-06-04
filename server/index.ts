@@ -1,12 +1,13 @@
-import { WebSocketServer } from 'ws'
+import { WebSocketServer, WebSocket } from 'ws'
 import { createServer } from 'http'
 import { v4 as uuidv4 } from 'uuid'
+import type { WebSocket as ServerWebSocket } from 'ws'
 
 interface Player {
   id: string
-  ws: WebSocket
+  ws: ServerWebSocket
   preferences: {
-    region: string
+    island: string
     connection: 'wired' | 'wireless'
     rules: {
       stock: number
@@ -41,7 +42,7 @@ class MatchmakingServer {
     })
   }
 
-  private handleConnection(ws: WebSocket) {
+  private handleConnection(ws: ServerWebSocket) {
     const playerId = uuidv4()
     console.log(`New connection: ${playerId}`)
 
@@ -60,7 +61,7 @@ class MatchmakingServer {
     })
   }
 
-  private handleMessage(playerId: string, ws: WebSocket, message: any) {
+  private handleMessage(playerId: string, ws: ServerWebSocket, message: any) {
     switch (message.type) {
       case 'search':
         this.handleSearch(playerId, ws, message.preferences)
@@ -73,7 +74,7 @@ class MatchmakingServer {
     }
   }
 
-  private handleSearch(playerId: string, ws: WebSocket, preferences: any) {
+  private handleSearch(playerId: string, ws: ServerWebSocket, preferences: any) {
     const player: Player = {
       id: playerId,
       ws,
@@ -134,7 +135,7 @@ class MatchmakingServer {
     // Simple matching: same region and connection type
     return this.searchQueue.find(p => 
       p.id !== player.id &&
-      p.preferences.region === player.preferences.region &&
+      p.preferences.island === player.preferences.island &&
       p.preferences.connection === player.preferences.connection
     ) || null
   }
@@ -171,13 +172,13 @@ class MatchmakingServer {
     })
   }
 
-  private sendMessage(ws: WebSocket, message: any) {
+  private sendMessage(ws: ServerWebSocket, message: any) {
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(message))
     }
   }
 
-  private sendError(ws: WebSocket, error: string) {
+  private sendError(ws: ServerWebSocket, error: string) {
     this.sendMessage(ws, {
       type: 'error',
       error

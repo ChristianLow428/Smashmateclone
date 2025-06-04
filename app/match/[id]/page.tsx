@@ -9,7 +9,7 @@ interface MatchDetails {
   opponent: {
     id: string
     preferences: {
-      region: string
+      island: string
       connection: 'wired' | 'wireless'
       rules: {
         stock: number
@@ -30,15 +30,19 @@ export default function MatchRoom({ params }: { params: { id: string } }) {
     // Set up match status listener
     matchmakingService.onMatchStatus((status) => {
       if (status.matchId === params.id) {
-        setMatchDetails(status)
+        setMatchDetails({
+          id: status.matchId!,
+          status: status.status as MatchDetails['status'],
+          opponent: status.opponent!
+        })
         if (status.status === 'disconnected') {
           setError('Opponent disconnected')
         }
       }
     })
 
-    // Start countdown when match is found
-    if (matchDetails?.status === 'found') {
+    // Start countdown when match is pending
+    if (matchDetails?.status === 'pending') {
       setCountdown(5)
       const timer = setInterval(() => {
         setCountdown((prev) => {
@@ -115,14 +119,14 @@ export default function MatchRoom({ params }: { params: { id: string } }) {
             <div>
               <h3 className="font-medium mb-2">Connection</h3>
               <ul className="space-y-2">
-                <li>Region: {matchDetails.opponent.preferences.region}</li>
+                <li>Region: {matchDetails.opponent.preferences.island}</li>
                 <li>Type: {matchDetails.opponent.preferences.connection}</li>
               </ul>
             </div>
           </div>
 
           {/* Ready Button */}
-          {matchDetails.status === 'found' && countdown === 0 && (
+          {matchDetails.status === 'pending' && countdown === 0 && (
             <div className="mt-8 text-center">
               <button
                 onClick={() => {
