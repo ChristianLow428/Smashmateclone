@@ -22,7 +22,7 @@ export default function RatingBattle() {
         <h1 className="text-3xl font-bold mb-8 text-center">Rating Battle</h1>
         <div className="mb-8 flex flex-col items-center">
           <Image
-            src="/ruleset.jpg"
+            src="/ruleset.png"
             alt="Hawaii Smash Ultimate Ruleset"
             width={800}
             height={600}
