@@ -1,3 +1,2 @@
 *.jpg filter=lfs diff=lfs merge=lfs -text
-public/ruleset.jpg filter=lfs diff=lfs merge=lfs -text
 public/ruleset.jpg !text !filter !merge !diff
