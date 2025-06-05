@@ -83,7 +83,7 @@ export default function FreeBattle() {
         {/* Hawaii Smash Ultimate Ruleset Image */}
         <div className="mb-8 flex flex-col items-center">
           <Image
-            src="/ruleset(1).jpg"
+            src="/smash_ruleset.jpg"
             alt="Hawaii Smash Ultimate Ruleset"
             width={800}
             height={600}
