@@ -1,0 +1,42 @@
+# Authentication
+GOOGLE_CLIENT_ID=1044215515601-pat01feoaaf3baf3hkorvgfv72ff5eht.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=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
+DISCORD_CLIENT_ID=1379724771574419537
+DISCORD_CLIENT_SECRET=Xx1XYuAXBymvScHiC5nRPW6nZLQeiOya
+NEXTAUTH_SECRET=Ng3xr09ybDrx6cPYJOFx5tDW8iGlYwQITH+Xp3FqNhA=
+NEXTAUTH_URL=http://localhost:3000
+
+#Postgres
+POSTGRES_URL="postgres://postgres.sfdhxevvswmdtjyxzypf:RPIM24CmmcMCFcqk@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require&supa=base-pooler.x"
+POSTGRES_USER="postgres"
+POSTGRES_HOST="db.sfdhxevvswmdtjyxzypf.supabase.co"
+SUPABASE_JWT_SECRET="YBYFznVPHzIBu4iYu+rwfC+kmdkfVDsITE7llDdD4c7LTcN4/zr1nH9xY5PLXsQDonm8ZVybxfsn4nSfcNazbQ=="
+NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmZGh4ZXZ2c3dtZHRqeXh6eXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk2ODI1MDksImV4cCI6MjA2NTI1ODUwOX0.83CW1EDcIfoJjvu59fTm85SMgwImOkZuBMinb72diPQ"
+POSTGRES_PRISMA_URL="postgres://postgres.sfdhxevvswmdtjyxzypf:RPIM24CmmcMCFcqk@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require&supa=base-pooler.x"
+POSTGRES_PASSWORD="RPIM24CmmcMCFcqk"
+POSTGRES_DATABASE="postgres"
+SUPABASE_URL="https://sfdhxevvswmdtjyxzypf.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmZGh4ZXZ2c3dtZHRqeXh6eXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk2ODI1MDksImV4cCI6MjA2NTI1ODUwOX0.83CW1EDcIfoJjvu59fTm85SMgwImOkZuBMinb72diPQ"
+NEXT_PUBLIC_SUPABASE_URL="https://sfdhxevvswmdtjyxzypf.supabase.co"
+SUPABASE_SERVICE_ROLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmZGh4ZXZ2c3dtZHRqeXh6eXBmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0OTY4MjUwOSwiZXhwIjoyMDY1MjU4NTA5fQ.ujBHTbyCXvHWKmeu7c8ROsleFuLzgdvVilNFPicG3c8"
+POSTGRES_URL_NON_POOLING="postgres://postgres.sfdhxevvswmdtjyxzypf:RPIM24CmmcMCFcqk@aws-0-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require"
+
+# Supabase Configuration
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmZGh4ZXZ2c3dtZHRqeXh6eXBmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0OTY4MjUwOSwiZXhwIjoyMDY1MjU4NTA5fQ.ujBHTbyCXvHWKmeu7c8ROsleFuLzgdvVilNFPicG3c8
+
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmZGh4ZXZ2c3dtZHRqeXh6eXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk2ODI1MDksImV4cCI6MjA2NTI1ODUwOX0.83CW1EDcIfoJjvu59fTm85SMgwImOkZuBMinb72diPQ
+
+NEXT_PUBLIC_SUPABASE_URL=https://sfdhxevvswmdtjyxzypf.supabase.co
+
+
+# This was inserted by `prisma init`:
+# Environment variables declared in this file are automatically made available to Prisma.
+# See the documentation for more detail: https://pris.ly/d/prisma-schema#accessing-environment-variables-from-the-schema
+
+# Prisma supports the native connection string format for PostgreSQL, MySQL, SQLite, SQL Server, MongoDB and CockroachDB.
+# See the documentation for all the connection string options: https://pris.ly/d/connection-strings
+
+# The following `prisma+postgres` URL is similar to the URL produced by running a local Prisma Postgres 
+# server with the `prisma dev` CLI command, when not choosing any non-default ports or settings. The API key, unlike the 
+# one found in a remote Prisma Postgres URL, does not contain any sensitive information.
+

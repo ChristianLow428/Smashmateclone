@@ -7,8 +7,8 @@ import Navbar from './components/Navbar'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Smashmate Clone',
-  description: 'A Super Smash Bros. matchmaking platform',
+  title: 'LocalHost Smash',
+  description: 'Hawaiʻi matchmaking platform',
 
   
 }
@@ -27,3 +27,4 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   )
 }
+ 
