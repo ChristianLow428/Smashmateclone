@@ -18,17 +18,20 @@ export default function Navbar() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex space-x-8">
-            <Link href="/free-battle" className="text-gray-600 hover:text-gray-900">
+            <Link href="/free-battle" className="text-gray-600 hover:text-blue-600">
               Free Battle
             </Link>
-            <Link href="/rating-battle" className="text-gray-600 hover:text-gray-900">
+            <Link href="/rating-battle" className="text-gray-600 hover:text-blue-600">
               Rating Battle
             </Link>
-            <Link href="/tournaments" className="text-gray-600 hover:text-gray-900">
+            <Link href="/tournaments" className="text-gray-600 hover:text-blue-600">
               Tournaments
             </Link>
-            <Link href="/rankings" className="text-gray-600 hover:text-gray-900">
+            <Link href="/rankings" className="text-gray-600 hover:text-blue-600">
               Rankings
+            </Link>
+            <Link href="/profile" className="text-gray-600 hover:text-blue-600">
+              Profile
             </Link>
           </div>
 
@@ -36,7 +39,12 @@ export default function Navbar() {
           <div className="hidden md:flex space-x-4 items-center">
             {status === 'loading' ? null : session ? (
               <>
-                <span className="text-gray-700">{session.user?.name || session.user?.email}</span>
+                <Link 
+                  href="/profile" 
+                  className="text-gray-700 hover:text-blue-600 transition-colors"
+                >
+                  {session.user?.name || session.user?.email}
+                </Link>
                 <button
                   className="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400"
                   onClick={() => signOut()}
@@ -88,10 +96,18 @@ export default function Navbar() {
               <Link href="/rankings" className="block px-3 py-2 text-gray-600 hover:text-gray-900">
                 Rankings
               </Link>
+              <Link href="/profile" className="block px-3 py-2 text-gray-600 hover:text-gray-900">
+                Profile
+              </Link>
               <div className="pt-4 pb-3 border-t border-gray-200">
                 {status === 'loading' ? null : session ? (
                   <>
-                    <span className="block text-gray-700 mb-2">{session.user?.name || session.user?.email}</span>
+                    <Link 
+                      href="/profile" 
+                      className="block text-gray-700 hover:text-blue-600 transition-colors mb-2"
+                    >
+                      {session.user?.name || session.user?.email}
+                    </Link>
                     <button
                       className="w-full bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400"
                       onClick={() => signOut()}
