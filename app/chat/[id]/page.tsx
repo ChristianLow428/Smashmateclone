@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { createServerClient } from '@/utils/supabase/server';
+import { createClient } from '@/utils/supabase/client';
 
 interface Message {
   id: string;
@@ -19,7 +19,7 @@ export default function ChatRoom({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     const initSupabase = async () => {
-      const client = await createServerClient();
+      const client = await createClient();
       setSupabase(client);
 
       // Subscribe to new messages
@@ -60,12 +60,12 @@ export default function ChatRoom({ params }: { params: { id: string } }) {
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !supabase || !session?.user?.id) return;
+    if (!newMessage.trim() || !supabase || !(session?.user && (session.user as { id?: string }).id)) return;
 
     try {
       await supabase.from('messages').insert({
         chat_room_id: params.id,
-        sender_id: session.user.id,
+        sender_id: (session.user as { id?: string }).id,
         content: newMessage.trim(),
       });
 
@@ -86,7 +86,7 @@ export default function ChatRoom({ params }: { params: { id: string } }) {
           <div
             key={message.id}
             className={`p-3 rounded-lg ${
-              message.sender_id === session.user?.id
+              message.sender_id === (session.user as { id?: string })?.id
                 ? 'bg-blue-500 text-white ml-auto'
                 : 'bg-gray-200 text-gray-800'
             } max-w-[70%]`}

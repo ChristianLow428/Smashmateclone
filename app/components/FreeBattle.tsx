@@ -35,7 +35,7 @@ export default function FreeBattle() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ userId: session.user.id }),
+        body: JSON.stringify({ userId: (session.user as { id?: string }).id }),
       });
 
       const data = await response.json();
@@ -63,7 +63,7 @@ export default function FreeBattle() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ userId: session.user.id }),
+        body: JSON.stringify({ userId: (session.user as { id?: string }).id }),
       });
     } catch (error) {
       console.error('Cancel matchmaking error:', error);
