@@ -83,10 +83,10 @@ export default function TournamentFeed() {
               <div className="mt-2">
                 <Link
                   href={tournamentLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
+              target="_blank"
+              rel="noopener noreferrer"
                   className="text-sm text-blue-500 hover:text-blue-600"
-                >
+            >
                   View Details →
                 </Link>
               </div>
@@ -101,7 +101,7 @@ export default function TournamentFeed() {
         >
           View All Tournaments →
         </Link>
-      </div>
+        </div>
     </div>
   );
 } 

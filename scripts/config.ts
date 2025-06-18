@@ -21,6 +21,7 @@ export const config = {
   discord: {
     token: process.env.DISCORD_BOT_TOKEN!,
     tournamentChannelId: process.env.DISCORD_TOURNAMENTS_CHANNEL_ID!,
+    rankingsChannelId: process.env.DISCORD_RANKINGS_CHANNEL_ID!,
   },
   app: {
     url: process.env.NEXT_PUBLIC_APP_URL!,
