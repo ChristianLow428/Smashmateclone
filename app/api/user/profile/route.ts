@@ -1,11 +1,12 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/options';
-import { createServerClient } from '@/utils/supabase/server';
+import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 export async function PUT(request: Request) {
   const session = await getServerSession(authOptions);
-  const supabase = await createServerClient();
+  const supabase = createClient(cookies());
   
   if (!session?.user?.email) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -58,7 +59,7 @@ export async function PUT(request: Request) {
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  const supabase = await createServerClient();
+  const supabase = createClient(cookies());
   
   if (!session?.user?.email) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

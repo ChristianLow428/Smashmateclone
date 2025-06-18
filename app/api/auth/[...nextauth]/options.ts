@@ -1,5 +1,7 @@
 import GoogleProvider from 'next-auth/providers/google'
 import DiscordProvider from 'next-auth/providers/discord'
+import { Session, User } from 'next-auth';
+import { JWT } from 'next-auth/jwt';
 
 export const authOptions = {
   providers: [
@@ -13,9 +15,9 @@ export const authOptions = {
     }),
   ],
   callbacks: {
-    async session({ session, token }) {
+    async session({ session, token }: { session: Session; token: JWT }) {
       if (session.user) {
-        session.user.id = token.sub;
+        (session.user as { id?: string }).id = token.sub;
       }
       return session;
     },
