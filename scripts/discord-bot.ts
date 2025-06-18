@@ -77,8 +77,29 @@ const client = new Client({
 
 // Function to process a message
 async function processMessage(message: Message) {
-  // Skip bot messages
   if (message.author.bot) return;
+
+  // Rankings channel logic
+  if (message.channelId === config.discord.rankingsChannelId) {
+    console.log('Processing rankings message:', message.content);
+    try {
+      const response = await fetch(`${config.app.url}/api/webhook/ranking`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: message.content,
+          timestamp: message.createdAt.toISOString(),
+          discord_message_id: message.id,
+          discord_channel_id: message.channelId,
+        }),
+      });
+      const result = await response.json();
+      console.log('Ranking API response:', result);
+    } catch (err) {
+      console.error('Error sending ranking to API:', err);
+    }
+    return;
+  }
 
   // Only process messages from the tournament channel
   if (message.channelId === config.discord.tournamentChannelId) {
@@ -133,44 +154,27 @@ async function processMessage(message: Message) {
 // When the client is ready, run this code (only once)
 client.once('ready', async () => {
   console.log(`Logged in as ${client.user?.tag}!`);
-  console.log('Monitoring channel:', config.discord.tournamentChannelId);
 
-  // Get the tournament channel
-  const channel = await client.channels.fetch(config.discord.tournamentChannelId);
-  if (!channel || !channel.isTextBased()) {
-    console.error('Could not find tournament channel');
-    return;
-  }
-
-  // Fetch the last 100 messages
-  const messages = await channel.messages.fetch({ limit: 100 });
-  console.log(`Found ${messages.size} messages in channel`);
-
-  // Collect all message IDs
-  const messageIds = Array.from(messages.keys());
-
-  // Clean up old tournaments
-  try {
-    const response = await fetch(`${config.app.url}/api/webhook/tournament?messageIds=${messageIds.join(',')}`, {
-      method: 'DELETE',
+  // --- Existing: Process tournaments channel ---
+  const tournamentChannel = await client.channels.fetch(config.discord.tournamentChannelId);
+  if (tournamentChannel && tournamentChannel.isTextBased()) {
+    const tournamentMessages = await tournamentChannel.messages.fetch({ limit: 100 });
+    tournamentMessages.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+    tournamentMessages.forEach(async (message) => {
+      await processMessage(message);
     });
-
-    const result = await response.json() as ApiResponse;
-
-    if (!response.ok) {
-      throw new Error(result.error || `HTTP error! status: ${response.status}`);
-    }
-
-    console.log('Cleaned up old tournaments');
-  } catch (error) {
-    console.error('Error cleaning up tournaments:', error);
   }
 
-  // Process messages in chronological order (oldest first)
-  messages.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
-  messages.forEach(async (message) => {
-    await processMessage(message);
-  });
+  // --- NEW: Process rankings channel ---
+  const rankingsChannel = await client.channels.fetch(config.discord.rankingsChannelId);
+  if (rankingsChannel && rankingsChannel.isTextBased()) {
+    const rankingsMessages = await rankingsChannel.messages.fetch({ limit: 1 }); // Only the most recent
+    rankingsMessages.sort((a, b) => b.createdTimestamp - a.createdTimestamp); // Most recent first
+    for (const message of rankingsMessages.values()) {
+      await processMessage(message);
+      break; // Only process the most recent
+    }
+  }
 });
 
 // Listen for new messages

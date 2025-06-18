@@ -166,3 +166,25 @@ alter publication supabase_realtime add table chat_rooms;
 alter publication supabase_realtime add table messages;
 alter publication supabase_realtime add table tournaments;
 alter publication supabase_realtime add table tournament_participants;
+
+-- For rankings channel
+
+create table if not exists rankings (
+  id uuid primary key default uuid_generate_v4(),
+  content text,
+  discord_message_id text unique,
+  discord_channel_id text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table rankings enable row level security;
+create policy "Allow public read access to rankings"
+  on rankings for select
+  using (true); 
+
+alter table messages
+add column if not exists discord_channel_id text;
+
+alter table messages alter column sender_id drop not null;
+
+select id, discord_channel_id, content, created_at from messages order by created_at desc limit 1;

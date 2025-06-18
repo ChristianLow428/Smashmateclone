@@ -1,0 +1,76 @@
+Configuration loaded:
+DISCORD_BOT_TOKEN: Present
+DISCORD_TOURNAMENT_CHANNEL_ID: Present
+NEXT_PUBLIC_APP_URL: Present
+Logged in as Smash-Tracker#0372!
+Monitoring channel: 1073760674641084508
+Found 5 messages in channel
+Cleaned up old tournaments
+Processing tournament message: 🔥<:weed:940352851069255741> 4/20 <:weed:940352851069255741>🔥
+No URL found in message
+Processing tournament message: Farrington High School Summer Event
+Hawaii Summer E-Games 2025
+
+The first 50 people to pre-register for singles will be eligible for a drawing to win a $100 Gift Card from Zippys.  The drawing will take place before singles starts and you must be present to win.  
+
+To ensure that everyone has a fair chance to qualify, Pre Registration will **OPEN **on **05/16/2025** at **NOON**.  Approximately 24 hours from the time of this post.
+
+Free Dominos pizza, Chick-Fil-A, energy bars, bananas, water and Powerade for all entrants.
+
+Top 8 $1000 prize pool of Zippys and Dominos gift cards.  Thank you to UHA Health and Aloha Pacific Federal Credit Union for providing the prizes for this tournament.
+https://www.start.gg/tournament/hawaii-summer-e-games-2025/details
+Processing tournament message: 
+No URL found in message
+Processing tournament message: https://www.start.gg/tournament/manoa-monthlies-91/details Manoa Monthlies 91 Saturday July 5th
+Special guest player from Japan will be attending.
+Processing tournament message: <@&190001355614584832> tourney taking place this weekend hosted by Gam3Escape and the UH Hilo squad. No tourney link, but hope to see you guys there!
+No URL found in message
+Extracted title: Hawaii Summer E-Games 2025
+Extracted description: The best place for Hawaii Summer E-Games 2025 brackets, streams, standings and schedules all in one place!
+Extracted title: Manoa Monthlies 91
+Extracted description: The best place for Manoa Monthlies 91 brackets, streams, standings and schedules all in one place!
+Tournament saved: {
+  success: true,
+  tournament: {
+    id: '865fbeaf-79b0-4b9f-85db-224cf2f79f17',
+    discord_message_id: '1379327726585905152',
+    title: 'Manoa Monthlies 91',
+    description: 'https://www.start.gg/tournament/manoa-monthlies-91/details Manoa Monthlies 91 Saturday July 5th\n' +
+      'Special guest player from Japan will be attending.',
+    date: null,
+    registration_deadline: null,
+    max_participants: null,
+    current_participants: 0,
+    status: 'upcoming',
+    discord_channel_id: '1073760674641084508',
+    created_at: '2025-06-03T05:15:56.688+00:00',
+    updated_at: '2025-06-18T04:15:32.573199+00:00'
+  }
+}
+Tournament saved: {
+  success: true,
+  tournament: {
+    id: '722b087e-06c9-443b-96ed-e717605707a2',
+    discord_message_id: '1372695264770658484',
+    title: 'Hawaii Summer E-Games 2025',
+    description: 'Farrington High School Summer Event\n' +
+      'Hawaii Summer E-Games 2025\n' +
+      '\n' +
+      'The first 50 people to pre-register for singles will be eligible for a drawing to win a $100 Gift Card from Zippys.  The drawing will take place before singles starts and you must be present to win.  \n' +
+      '\n' +
+      'To ensure that everyone has a fair chance to qualify, Pre Registration will **OPEN **on **05/16/2025** at **NOON**.  Approximately 24 hours from the time of this post.\n' +
+      '\n' +
+      'Free Dominos pizza, Chick-Fil-A, energy bars, bananas, water and Powerade for all entrants.\n' +
+      '\n' +
+      'Top 8 $1000 prize pool of Zippys and Dominos gift cards.  Thank you to UHA Health and Aloha Pacific Federal Credit Union for providing the prizes for this tournament.\n' +
+      'https://www.start.gg/tournament/hawaii-summer-e-games-2025/details',
+    date: null,
+    registration_deadline: null,
+    max_participants: null,
+    current_participants: 0,
+    status: 'upcoming',
+    discord_channel_id: '1073760674641084508',
+    created_at: '2025-05-15T22:00:54.566+00:00',
+    updated_at: '2025-06-18T04:15:32.70434+00:00'
+  }
+}
