@@ -22,7 +22,16 @@ export default async function RankingsPage() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  console.log('RANKINGS_CHANNEL_ID:', RANKINGS_CHANNEL_ID);
+  console.log('Environment check:', {
+    RANKINGS_CHANNEL_ID,
+    hasChannelId: !!RANKINGS_CHANNEL_ID,
+    channelIdLength: RANKINGS_CHANNEL_ID?.length,
+    allEnvVars: Object.keys(process.env).filter(key => key.includes('DISCORD'))
+  });
+
+  if (!RANKINGS_CHANNEL_ID) {
+    return <div>Error: DISCORD_RANKINGS_CHANNEL_ID environment variable is not set</div>;
+  }
 
   const { data: messages, error } = await supabase
     .from('messages')
@@ -31,7 +40,7 @@ export default async function RankingsPage() {
     .order('created_at', { ascending: false })
     .limit(1);
 
-  console.log('Query result:', { messages, error });
+  console.log('Query result:', { messages, error, channelId: RANKINGS_CHANNEL_ID });
 
   if (error) {
     return <div>Error loading rankings: {error.message}</div>;
