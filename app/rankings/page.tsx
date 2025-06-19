@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
 // Use the same pattern as tournaments - fallback to hardcoded value if env var not available
@@ -17,9 +17,11 @@ function cleanDiscordMarkdown(text: string): string {
 }
 
 export default async function RankingsPage() {
-  // Use the same server-side client as tournaments
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  // Use service role key to bypass RLS restrictions (like the webhook does)
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
   // Comprehensive environment debugging
   const envDebug = {
