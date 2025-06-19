@@ -1,7 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/utils/supabase/server';
 import { cookies } from 'next/headers';
 
-const RANKINGS_CHANNEL_ID = process.env.DISCORD_RANKINGS_CHANNEL_ID!;
+// Use the same pattern as tournaments - fallback to hardcoded value if env var not available
+const RANKINGS_CHANNEL_ID = process.env.DISCORD_RANKINGS_CHANNEL_ID || '1147057808752267285';
 
 // Function to clean Discord markdown formatting
 function cleanDiscordMarkdown(text: string): string {
@@ -16,11 +17,9 @@ function cleanDiscordMarkdown(text: string): string {
 }
 
 export default async function RankingsPage() {
-  // Use service role key to bypass RLS restrictions
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  // Use the same server-side client as tournaments
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
 
   // Comprehensive environment debugging
   const envDebug = {
@@ -31,25 +30,9 @@ export default async function RankingsPage() {
     allEnvVars: Object.keys(process.env).filter(key => key.includes('RANKING')),
     nodeEnv: process.env.NODE_ENV,
     vercelEnv: process.env.VERCEL_ENV,
-    allEnvKeys: Object.keys(process.env).sort()
   };
 
   console.log('Environment Debug Info:', JSON.stringify(envDebug, null, 2));
-
-  if (!RANKINGS_CHANNEL_ID) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8">Environment Variable Error</h1>
-        <div className="bg-red-100 p-4 rounded">
-          <p className="font-bold">DISCORD_RANKINGS_CHANNEL_ID environment variable is not set</p>
-          <p className="mt-2">Debug info:</p>
-          <pre className="bg-gray-100 p-2 rounded text-sm mt-2 overflow-auto">
-            {JSON.stringify(envDebug, null, 2)}
-          </pre>
-        </div>
-      </div>
-    );
-  }
 
   const { data: messages, error } = await supabase
     .from('messages')
@@ -65,7 +48,18 @@ export default async function RankingsPage() {
   }
 
   if (!messages || messages.length === 0) {
-    return <div>No rankings available. Channel ID: {RANKINGS_CHANNEL_ID}</div>;
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-8">No Rankings Available</h1>
+        <div className="bg-yellow-100 p-4 rounded">
+          <p>No rankings found for channel ID: {RANKINGS_CHANNEL_ID}</p>
+          <p className="mt-2 text-sm">Debug info:</p>
+          <pre className="bg-gray-100 p-2 rounded text-sm mt-2 overflow-auto">
+            {JSON.stringify(envDebug, null, 2)}
+          </pre>
+        </div>
+      </div>
+    );
   }
 
   const cleanedContent = cleanDiscordMarkdown(messages[0].content);
