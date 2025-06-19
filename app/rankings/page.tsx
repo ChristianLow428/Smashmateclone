@@ -22,15 +22,33 @@ export default async function RankingsPage() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  console.log('Environment check:', {
+  // Comprehensive environment debugging
+  const envDebug = {
     RANKINGS_CHANNEL_ID,
     hasChannelId: !!RANKINGS_CHANNEL_ID,
     channelIdLength: RANKINGS_CHANNEL_ID?.length,
-    allEnvVars: Object.keys(process.env).filter(key => key.includes('DISCORD'))
-  });
+    allDiscordVars: Object.keys(process.env).filter(key => key.includes('DISCORD')),
+    allEnvVars: Object.keys(process.env).filter(key => key.includes('RANKING')),
+    nodeEnv: process.env.NODE_ENV,
+    vercelEnv: process.env.VERCEL_ENV,
+    allEnvKeys: Object.keys(process.env).sort()
+  };
+
+  console.log('Environment Debug Info:', JSON.stringify(envDebug, null, 2));
 
   if (!RANKINGS_CHANNEL_ID) {
-    return <div>Error: DISCORD_RANKINGS_CHANNEL_ID environment variable is not set</div>;
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-8">Environment Variable Error</h1>
+        <div className="bg-red-100 p-4 rounded">
+          <p className="font-bold">DISCORD_RANKINGS_CHANNEL_ID environment variable is not set</p>
+          <p className="mt-2">Debug info:</p>
+          <pre className="bg-gray-100 p-2 rounded text-sm mt-2 overflow-auto">
+            {JSON.stringify(envDebug, null, 2)}
+          </pre>
+        </div>
+      </div>
+    );
   }
 
   const { data: messages, error } = await supabase
