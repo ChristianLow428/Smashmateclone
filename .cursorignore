@@ -1,0 +1,4 @@
+# Allow Cursor AI to see env files for this project
+!.env*
+!.env.local
+!.env.example 
