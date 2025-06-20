@@ -68,7 +68,7 @@ export default async function RankingsPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Latest Rankings</h1>
+      <h1 className="text-3xl font-bold mb-8">Latest Offline Rankings</h1>
       <pre className="bg-gray-100 p-4 rounded whitespace-pre-wrap">{cleanedContent}</pre>
     </div>
   );
