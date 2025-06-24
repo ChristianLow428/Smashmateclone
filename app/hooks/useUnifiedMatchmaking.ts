@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react'
-import { matchmakingService } from '../services/matchmaking'
 import { supabaseMatchmakingService } from '../services/supabase-matchmaking'
 
 export interface MatchmakingPreferences {
@@ -35,28 +34,31 @@ export function useUnifiedMatchmaking() {
 
   useEffect(() => {
     if (useWebSocket) {
-      // Use WebSocket service for local development
+      // Use WebSocket service for local development - lazy load it
       console.log('Using WebSocket matchmaking service')
       
-      matchmakingService.onMatch((matchId) => {
-        console.log('WebSocket: Match found:', matchId)
-        setCurrentMatch(matchId)
-        setIsSearching(false)
-      })
+      // Dynamically import the WebSocket service only when needed
+      import('../services/matchmaking').then(({ matchmakingService }) => {
+        matchmakingService.onMatch((matchId) => {
+          console.log('WebSocket: Match found:', matchId)
+          setCurrentMatch(matchId)
+          setIsSearching(false)
+        })
 
-      matchmakingService.onMatchStatus((status) => {
-        console.log('WebSocket: Match status update:', status)
-        setMatchStatus(status)
-      })
+        matchmakingService.onMatchStatus((status) => {
+          console.log('WebSocket: Match status update:', status)
+          setMatchStatus(status)
+        })
 
-      matchmakingService.onError((error) => {
-        console.error('WebSocket: Matchmaking error:', error)
-        setError(error)
-        setIsSearching(false)
+        matchmakingService.onError((error) => {
+          console.error('WebSocket: Matchmaking error:', error)
+          setError(error)
+          setIsSearching(false)
+        })
       })
 
       return () => {
-        matchmakingService.disconnect()
+        // Cleanup will be handled by the service itself
       }
     } else {
       // Use Supabase service for production/Vercel
@@ -90,6 +92,8 @@ export function useUnifiedMatchmaking() {
     setIsSearching(true)
     
     if (useWebSocket) {
+      // Dynamically import and use WebSocket service
+      const { matchmakingService } = await import('../services/matchmaking')
       matchmakingService.startSearch(preferences)
     } else {
       if (!userId) {
@@ -104,6 +108,7 @@ export function useUnifiedMatchmaking() {
   const cancelSearch = useCallback(async () => {
     setIsSearching(false)
     if (useWebSocket) {
+      const { matchmakingService } = await import('../services/matchmaking')
       matchmakingService.cancelSearch()
     } else {
       await supabaseMatchmakingService.cancelSearch()
@@ -114,6 +119,7 @@ export function useUnifiedMatchmaking() {
     setCurrentMatch(null)
     setMatchStatus(null)
     if (useWebSocket) {
+      const { matchmakingService } = await import('../services/matchmaking')
       matchmakingService.leaveMatch(matchId)
     } else {
       await supabaseMatchmakingService.leaveMatch(matchId)
@@ -122,6 +128,7 @@ export function useUnifiedMatchmaking() {
 
   const selectCharacter = useCallback(async (matchId: string, character: string) => {
     if (useWebSocket) {
+      const { matchmakingService } = await import('../services/matchmaking')
       matchmakingService.selectCharacter(matchId, character)
     } else {
       await supabaseMatchmakingService.selectCharacter(matchId, character)
@@ -130,6 +137,7 @@ export function useUnifiedMatchmaking() {
 
   const banStage = useCallback(async (matchId: string, stage: string) => {
     if (useWebSocket) {
+      const { matchmakingService } = await import('../services/matchmaking')
       matchmakingService.banStage(matchId, stage)
     } else {
       await supabaseMatchmakingService.banStage(matchId, stage)
@@ -138,6 +146,7 @@ export function useUnifiedMatchmaking() {
 
   const pickStage = useCallback(async (matchId: string, stage: string) => {
     if (useWebSocket) {
+      const { matchmakingService } = await import('../services/matchmaking')
       matchmakingService.pickStage(matchId, stage)
     } else {
       await supabaseMatchmakingService.pickStage(matchId, stage)
@@ -146,6 +155,7 @@ export function useUnifiedMatchmaking() {
 
   const reportGameResult = useCallback(async (matchId: string, winner: number) => {
     if (useWebSocket) {
+      const { matchmakingService } = await import('../services/matchmaking')
       matchmakingService.reportGameResult(matchId, winner)
     } else {
       await supabaseMatchmakingService.reportGameResult(matchId, winner)
