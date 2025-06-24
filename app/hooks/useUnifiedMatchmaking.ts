@@ -21,7 +21,17 @@ export function useUnifiedMatchmaking() {
 
   // Determine which service to use based on environment
   const isDevelopment = process.env.NODE_ENV === 'development'
-  const useWebSocket = isDevelopment && typeof window !== 'undefined' && window.location.hostname === 'localhost'
+  const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+  const useWebSocket = isDevelopment && isLocalhost
+
+  // Debug logging
+  console.log('Environment detection:', {
+    NODE_ENV: process.env.NODE_ENV,
+    hostname: typeof window !== 'undefined' ? window.location.hostname : 'server-side',
+    isDevelopment,
+    isLocalhost,
+    useWebSocket
+  })
 
   useEffect(() => {
     if (useWebSocket) {
