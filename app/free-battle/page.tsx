@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSupabaseMatchmaking } from '../hooks/useSupabaseMatchmaking'
+import { useMatchmaking } from '../hooks/useMatchmaking'
 import Image from 'next/image'
 import { useSession, signIn } from 'next-auth/react'
 import TournamentMatch from '../components/TournamentMatch'
@@ -59,17 +59,20 @@ export default function FreeBattle() {
     pickStage,
     reportGameResult,
     sendChatMessage
-  } = useSupabaseMatchmaking()
+  } = useMatchmaking()
 
   useEffect(() => {
     // Handle match status updates
     if (matchStatus) {
       console.log('Match status update:', matchStatus)
       
-      if (matchStatus.type === 'match_state' && matchStatus.status === 'character_selection') {
-        // Extract opponent info from match data
-        // This would need to be fetched from the database
+      if (matchStatus.type === 'match' && matchStatus.status === 'character_selection') {
+        // Set opponent and player index from the match message
+        setOpponent(matchStatus.opponent)
+        setPlayerIndex(matchStatus.playerIndex)
         console.log('Character selection phase started')
+        console.log('Opponent:', matchStatus.opponent)
+        console.log('Player index:', matchStatus.playerIndex)
       } else if (matchStatus.type === 'match_state' && matchStatus.status === 'stage_striking') {
         console.log('Stage striking phase started')
       } else if (matchStatus.type === 'match_state' && matchStatus.status === 'active') {
@@ -82,6 +85,13 @@ export default function FreeBattle() {
 
   const handleStartSearch = () => {
     console.log('Starting search with preferences:', preferences)
+    console.log('Session data:', session)
+    
+    if (!session) {
+      console.error('No session available')
+      return
+    }
+    
     setOpponent(null)
     setPlayerIndex(null)
     startSearch(preferences)
