@@ -198,7 +198,7 @@ class SupabaseMatchmakingService {
         this.onMatchCallback?.(match.id)
       }
     } catch (error) {
-      console.error('Error finding our match:', error)
+      console.error('Error finding match:', error)
     }
   }
 
@@ -272,56 +272,66 @@ class SupabaseMatchmakingService {
     })
   }
 
-  public async startSearch(preferences: MatchmakingPreferences) {
+  public async startSearch(preferences: MatchmakingPreferences, userId: string) {
     try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        this.onErrorCallback?.('Not authenticated')
-        return
+      if (!userId) {
+        throw new Error('User ID is required')
       }
 
-      // Create or update player record
+      this.currentPlayerId = userId
+      console.log('Starting search with player ID:', this.currentPlayerId)
+
+      // Check if already in queue
       const { data: existingPlayer } = await supabase
         .from('matchmaking_players')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('id', this.currentPlayerId)
         .single()
 
       if (existingPlayer) {
-        // Update existing player
-        const { data: player } = await supabase
-          .from('matchmaking_players')
-          .update({
-            preferences,
-            status: 'searching',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingPlayer.id)
-          .select()
-          .single()
-
-        this.currentPlayerId = player?.id || null
-      } else {
-        // Create new player
-        const { data: player } = await supabase
-          .from('matchmaking_players')
-          .insert({
-            user_id: user.id,
-            preferences,
-            status: 'searching'
-          })
-          .select()
-          .single()
-
-        this.currentPlayerId = player?.id || null
+        if (existingPlayer.status === 'searching') {
+          console.log('Already searching for match')
+          return
+        } else if (existingPlayer.status === 'in_match') {
+          console.log('Already in a match')
+          throw new Error('Already in a match')
+        }
       }
 
-      // Try to find a match immediately
+      // Insert or update player in matchmaking queue
+      console.log('Attempting to insert/update player:', {
+        id: this.currentPlayerId,
+        status: 'searching',
+        preferences: preferences
+      })
+      
+      const { data: insertData, error: insertError } = await supabase
+        .from('matchmaking_players')
+        .upsert({
+          id: this.currentPlayerId,
+          status: 'searching',
+          preferences: preferences,
+          created_at: new Date().toISOString()
+        })
+        .select()
+
+      console.log('Insert result:', { data: insertData, error: insertError })
+
+      if (insertError) {
+        console.error('Error inserting player:', insertError)
+        const errorMessage = insertError.message || insertError.details || insertError.hint || 'Unknown database error'
+        throw new Error(`Failed to join queue: ${errorMessage}`)
+      }
+
+      console.log('Successfully joined matchmaking queue')
+      
+      // Try to find an immediate match
       await this.tryMatchPlayers()
+      
     } catch (error) {
       console.error('Error starting search:', error)
-      this.onErrorCallback?.('Failed to start search')
+      this.onErrorCallback?.(error instanceof Error ? error.message : 'Failed to start search')
+      throw error
     }
   }
 

@@ -157,7 +157,10 @@ class MatchmakingServer {
         if (chatConnections) {
             chatConnections.forEach(ws => {
                 if (ws.readyState === ws_1.WebSocket.OPEN) {
-                    this.sendMessage(ws, Object.assign({ type: 'chat' }, chatMessage));
+                    this.sendMessage(ws, {
+                        type: 'chat',
+                        ...chatMessage
+                    });
                 }
             });
         }
