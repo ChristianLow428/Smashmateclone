@@ -272,6 +272,11 @@ export default function FreeBattle() {
           opponent={opponent}
           onLeaveMatch={handleLeaveMatch}
           playerIndex={playerIndex}
+          selectCharacter={selectCharacter}
+          banStage={banStage}
+          pickStage={pickStage}
+          reportGameResult={reportGameResult}
+          matchStatus={matchStatus}
         />
       )}
     </div>

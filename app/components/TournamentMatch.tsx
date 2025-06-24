@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { matchmakingService } from '../services/matchmaking'
 import MatchChat from './MatchChat'
 
 interface TournamentMatchProps {
@@ -22,6 +21,12 @@ interface TournamentMatchProps {
   }
   onLeaveMatch: () => void
   playerIndex: number | null // 0 for player1, 1 for player2, null if not assigned yet
+  // Matchmaking functions passed as props
+  selectCharacter: (matchId: string, character: string) => Promise<void>
+  banStage: (matchId: string, stage: string) => Promise<void>
+  pickStage: (matchId: string, stage: string) => Promise<void>
+  reportGameResult: (matchId: string, winner: number) => Promise<void>
+  matchStatus: any // Pass matchStatus as prop instead of callback
 }
 
 type MatchStatus = 'character_selection' | 'stage_striking' | 'active' | 'completed'
@@ -58,9 +63,9 @@ const CHARACTERS = [
   'Kazuya', 'Sora'
 ]
 
-export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playerIndex }: TournamentMatchProps) {
+export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playerIndex, selectCharacter, banStage, pickStage, reportGameResult, matchStatus }: TournamentMatchProps) {
   const { data: session } = useSession()
-  const [matchStatus, setMatchStatus] = useState<MatchStatus>('character_selection')
+  const [matchStatusState, setMatchStatusState] = useState<MatchStatus>('character_selection')
   const [selectedCharacter, setSelectedCharacter] = useState<string>('')
   const [confirmedCharacter, setConfirmedCharacter] = useState<string>('')
   const [characterSearchTerm, setCharacterSearchTerm] = useState<string>('')
@@ -84,86 +89,82 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
   const [conflictResult, setConflictResult] = useState<{player1Reported: number, player2Reported: number} | null>(null)
 
   useEffect(() => {
-    // Set up matchmaking callbacks
-    matchmakingService.onMatchStatus((status) => {
-      console.log('Tournament match status update:', status)
+    // Handle matchStatus updates
+    if (matchStatus) {
+      console.log('Tournament match status update:', matchStatus)
       
-      if (status.type === 'match_state') {
-        if (status.status && ['character_selection', 'stage_striking', 'active', 'completed'].includes(status.status)) {
-          setMatchStatus(status.status as MatchStatus)
+      if (matchStatus.type === 'match_state') {
+        if (matchStatus.status && ['character_selection', 'stage_striking', 'active', 'completed'].includes(matchStatus.status)) {
+          setMatchStatusState(matchStatus.status as MatchStatus)
         }
-        if (status.selectedStage) setSelectedStage(status.selectedStage)
-        if (status.currentGame) setCurrentGame(status.currentGame)
-        if (status.player1Score !== undefined) setPlayer1Score(status.player1Score)
-        if (status.player2Score !== undefined) setPlayer2Score(status.player2Score)
-        if (status.currentPlayer !== undefined && playerIndex !== null) {
-          setCurrentPlayer(status.currentPlayer)
+        if (matchStatus.selectedStage) setSelectedStage(matchStatus.selectedStage)
+        if (matchStatus.currentGame) setCurrentGame(matchStatus.currentGame)
+        if (matchStatus.player1Score !== undefined) setPlayer1Score(matchStatus.player1Score)
+        if (matchStatus.player2Score !== undefined) setPlayer2Score(matchStatus.player2Score)
+        if (matchStatus.currentPlayer !== undefined && playerIndex !== null) {
+          setCurrentPlayer(matchStatus.currentPlayer)
           // Determine if it's my turn based on playerIndex
-          setIsMyTurn(status.currentPlayer === playerIndex)
+          setIsMyTurn(matchStatus.currentPlayer === playerIndex)
         }
-        if (status.strikesRemaining !== undefined) setStrikesRemaining(status.strikesRemaining)
-        if (status.availableStages) setAvailableStages(status.availableStages)
-      } else if (status.type === 'character_selection_update') {
-        if (status.player1Character) setPlayer1Character(status.player1Character)
-        if (status.player2Character) setPlayer2Character(status.player2Character)
-      } else if (status.type === 'stage_striking_update') {
-        if (status.currentPlayer !== undefined && playerIndex !== null) {
-          setCurrentPlayer(status.currentPlayer)
-          setIsMyTurn(status.currentPlayer === playerIndex)
-          console.log(`Stage striking update: currentPlayer=${status.currentPlayer}, playerIndex=${playerIndex}, isMyTurn=${status.currentPlayer === playerIndex}`)
+        if (matchStatus.strikesRemaining !== undefined) setStrikesRemaining(matchStatus.strikesRemaining)
+        if (matchStatus.availableStages) setAvailableStages(matchStatus.availableStages)
+      } else if (matchStatus.type === 'character_selection_update') {
+        if (matchStatus.player1Character) setPlayer1Character(matchStatus.player1Character)
+        if (matchStatus.player2Character) setPlayer2Character(matchStatus.player2Character)
+      } else if (matchStatus.type === 'stage_striking_update') {
+        if (matchStatus.currentPlayer !== undefined && playerIndex !== null) {
+          setCurrentPlayer(matchStatus.currentPlayer)
+          setIsMyTurn(matchStatus.currentPlayer === playerIndex)
+          console.log(`Stage striking update: currentPlayer=${matchStatus.currentPlayer}, playerIndex=${playerIndex}, isMyTurn=${matchStatus.currentPlayer === playerIndex}`)
         }
-        if (status.strikesRemaining !== undefined) {
-          setStrikesRemaining(status.strikesRemaining)
-          console.log(`Strikes remaining updated: ${status.strikesRemaining}`)
+        if (matchStatus.strikesRemaining !== undefined) {
+          setStrikesRemaining(matchStatus.strikesRemaining)
+          console.log(`Strikes remaining updated: ${matchStatus.strikesRemaining}`)
         }
-        if (status.availableStages) setAvailableStages(status.availableStages)
-        if (status.bannedStages) setBannedStages(status.bannedStages)
-      } else if (status.type === 'match_complete') {
-        setMatchStatus('completed')
+        if (matchStatus.availableStages) setAvailableStages(matchStatus.availableStages)
+        if (matchStatus.bannedStages) setBannedStages(matchStatus.bannedStages)
+      } else if (matchStatus.type === 'match_complete') {
+        setMatchStatusState('completed')
         // Update final scores from the match complete message
-        if (status.finalScore) {
-          setPlayer1Score(status.finalScore.player1)
-          setPlayer2Score(status.finalScore.player2)
-          console.log(`Match complete! Final score: ${status.finalScore.player1} - ${status.finalScore.player2}`)
+        if (matchStatus.finalScore) {
+          setPlayer1Score(matchStatus.finalScore.player1)
+          setPlayer2Score(matchStatus.finalScore.player2)
+          console.log(`Match complete! Final score: ${matchStatus.finalScore.player1} - ${matchStatus.finalScore.player2}`)
         }
         // Clear any pending validation state
         setGameResultPending(false)
         setGameResultConflict(false)
         setPendingResult(null)
         setConflictResult(null)
-      } else if (status.type === 'game_result_pending') {
+      } else if (matchStatus.type === 'game_result_pending') {
         setGameResultPending(true)
         setGameResultConflict(false)
-        if (status.reportedBy !== undefined && status.winner !== undefined) {
+        if (matchStatus.reportedBy !== undefined && matchStatus.winner !== undefined) {
           setPendingResult({
-            reportedBy: status.reportedBy,
-            winner: status.winner
+            reportedBy: matchStatus.reportedBy,
+            winner: matchStatus.winner
           })
-          console.log(`Game result pending: Player ${status.reportedBy + 1} reported Player ${status.winner} won`)
+          console.log(`Game result pending: Player ${matchStatus.reportedBy + 1} reported Player ${matchStatus.winner} won`)
         }
-      } else if (status.type === 'game_result_conflict') {
+      } else if (matchStatus.type === 'game_result_conflict') {
         setGameResultConflict(true)
         setGameResultPending(false)
-        if (status.player1Reported !== undefined && status.player2Reported !== undefined) {
+        if (matchStatus.player1Reported !== undefined && matchStatus.player2Reported !== undefined) {
           setConflictResult({
-            player1Reported: status.player1Reported,
-            player2Reported: status.player2Reported
+            player1Reported: matchStatus.player1Reported,
+            player2Reported: matchStatus.player2Reported
           })
-          console.log(`Game result conflict: Player 1 reported ${status.player1Reported}, Player 2 reported ${status.player2Reported}`)
+          console.log(`Game result conflict: Player 1 reported ${matchStatus.player1Reported}, Player 2 reported ${matchStatus.player2Reported}`)
         }
-      } else if (status.type === 'match_reset') {
+      } else if (matchStatus.type === 'match_reset') {
         // Handle match reset - this will be handled by the parent component
         console.log('Match reset received in TournamentMatch')
-      } else if (status.type === 'opponent_left') {
+      } else if (matchStatus.type === 'opponent_left') {
         // Auto-open chat when opponent leaves
         setShowChat(true)
       }
-    })
-
-    return () => {
-      // Cleanup
     }
-  }, [playerIndex]) // Add playerIndex to dependency array
+  }, [matchStatus, playerIndex]) // Add matchStatus to dependency array
 
   const handleCharacterSelect = (character: string) => {
     setSelectedCharacter(character)
@@ -172,7 +173,7 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
   const handleConfirmCharacter = () => {
     if (selectedCharacter) {
       setConfirmedCharacter(selectedCharacter)
-      matchmakingService.selectCharacter(matchId, selectedCharacter)
+      selectCharacter(matchId, selectedCharacter)
     }
   }
 
@@ -182,16 +183,16 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
       return
     }
     console.log(`Banning stage: ${stage}. Current state: strikesRemaining=${strikesRemaining}, currentPlayer=${currentPlayer}, playerIndex=${playerIndex}`)
-    matchmakingService.banStage(matchId, stage)
+    banStage(matchId, stage)
   }
 
   const handleStagePick = (stage: string) => {
     if (!isMyTurn) return
-    matchmakingService.pickStage(matchId, stage)
+    pickStage(matchId, stage)
   }
 
   const handleGameResult = (winner: number) => {
-    matchmakingService.reportGameResult(matchId, winner)
+    reportGameResult(matchId, winner)
   }
 
   const renderCharacterSelection = () => {
@@ -579,10 +580,10 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
         <div className="flex gap-4">
           {/* Main Content */}
           <div className="flex-1">
-            {matchStatus === 'character_selection' && renderCharacterSelection()}
-            {matchStatus === 'stage_striking' && renderStageStriking()}
-            {matchStatus === 'active' && renderGameActive()}
-            {matchStatus === 'completed' && renderMatchComplete()}
+            {matchStatusState === 'character_selection' && renderCharacterSelection()}
+            {matchStatusState === 'stage_striking' && renderStageStriking()}
+            {matchStatusState === 'active' && renderGameActive()}
+            {matchStatusState === 'completed' && renderMatchComplete()}
           </div>
 
           {/* Chat Sidebar */}
