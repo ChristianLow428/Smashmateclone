@@ -57,6 +57,8 @@ class SupabaseMatchmakingService {
   private onMatchCallback: ((matchId: string) => void) | null = null
   private onMatchStatusCallback: ((status: any) => void) | null = null
   private onErrorCallback: ((error: string) => void) | null = null
+  private pollingInterval: NodeJS.Timeout | null = null
+  private isSearching: boolean = false
 
   constructor() {
     // Initialize real-time subscriptions
@@ -64,32 +66,81 @@ class SupabaseMatchmakingService {
   }
 
   private async initializeRealtime() {
-    // Subscribe to matchmaking_players table for finding opponents
-    const playersChannel = supabase
-      .channel('matchmaking_players')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'matchmaking_players'
-        },
-        (payload) => {
-          this.handlePlayerJoined(payload.new)
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'matchmaking_players'
-        },
-        (payload) => {
-          this.handlePlayerUpdated(payload.new)
-        }
-      )
-      .subscribe()
+    try {
+      // Subscribe to matchmaking_players table for finding opponents
+      const playersChannel = supabase
+        .channel('matchmaking_players')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'matchmaking_players'
+          },
+          (payload) => {
+            this.handlePlayerJoined(payload.new)
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'matchmaking_players'
+          },
+          (payload) => {
+            this.handlePlayerUpdated(payload.new)
+          }
+        )
+        .subscribe((status) => {
+          console.log('Supabase Realtime subscription status:', status)
+          if (status === 'SUBSCRIBED') {
+            console.log('Realtime subscription successful')
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.log('Realtime subscription failed, falling back to polling')
+            this.startPolling()
+          }
+        })
+    } catch (error) {
+      console.error('Error initializing realtime:', error)
+      console.log('Falling back to polling mechanism')
+      this.startPolling()
+    }
+  }
+
+  private startPolling() {
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval)
+    }
+    
+    console.log('Starting polling fallback for matchmaking')
+    this.pollingInterval = setInterval(async () => {
+      if (this.isSearching && this.currentPlayerId) {
+        await this.pollForMatches()
+      }
+    }, 2000) // Poll every 2 seconds
+  }
+
+  private async pollForMatches() {
+    try {
+      // Check if we've been matched
+      const { data: ourPlayer } = await supabase
+        .from('matchmaking_players')
+        .select('*')
+        .eq('id', this.currentPlayerId)
+        .single()
+
+      if (ourPlayer && ourPlayer.status === 'in_match') {
+        // We got matched, find our match
+        await this.findOurMatch()
+        return
+      }
+
+      // Try to find an opponent
+      await this.tryMatchPlayers()
+    } catch (error) {
+      console.error('Error in polling:', error)
+    }
   }
 
   private async handlePlayerJoined(player: any) {
@@ -279,6 +330,7 @@ class SupabaseMatchmakingService {
       }
 
       this.currentPlayerId = userId
+      this.isSearching = true
       console.log('Starting search with player ID:', this.currentPlayerId)
 
       // Check if already in queue
@@ -328,6 +380,11 @@ class SupabaseMatchmakingService {
       // Try to find an immediate match
       await this.tryMatchPlayers()
       
+      // Start polling if realtime failed
+      if (!this.pollingInterval) {
+        this.startPolling()
+      }
+      
     } catch (error) {
       console.error('Error starting search:', error)
       this.onErrorCallback?.(error instanceof Error ? error.message : 'Failed to start search')
@@ -339,12 +396,20 @@ class SupabaseMatchmakingService {
     if (!this.currentPlayerId) return
 
     try {
+      this.isSearching = false
+      
       await supabase
         .from('matchmaking_players')
         .update({ status: 'offline' })
         .eq('id', this.currentPlayerId)
 
       this.currentPlayerId = null
+      
+      // Stop polling
+      if (this.pollingInterval) {
+        clearInterval(this.pollingInterval)
+        this.pollingInterval = null
+      }
     } catch (error) {
       console.error('Error canceling search:', error)
     }
@@ -365,6 +430,13 @@ class SupabaseMatchmakingService {
       this.chatChannel?.unsubscribe()
       this.currentMatchId = null
       this.currentPlayerId = null
+      this.isSearching = false
+      
+      // Stop polling
+      if (this.pollingInterval) {
+        clearInterval(this.pollingInterval)
+        this.pollingInterval = null
+      }
     } catch (error) {
       console.error('Error leaving match:', error)
     }
@@ -570,6 +642,13 @@ class SupabaseMatchmakingService {
     this.chatChannel?.unsubscribe()
     this.currentPlayerId = null
     this.currentMatchId = null
+    this.isSearching = false
+    
+    // Stop polling
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval)
+      this.pollingInterval = null
+    }
   }
 }
 
