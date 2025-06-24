@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { matchmakingService } from '../services/matchmaking'
+import { useSupabaseMatchmaking } from '../hooks/useSupabaseMatchmaking'
 import Image from 'next/image'
 import { useSession, signIn } from 'next-auth/react'
+import TournamentMatch from '../components/TournamentMatch'
 
 interface MatchPreferences {
   island: string
@@ -16,11 +17,24 @@ interface MatchPreferences {
   }
 }
 
+interface Opponent {
+  id: string
+  preferences: {
+    island: string
+    connection: 'wired' | 'wireless'
+    rules: {
+      stock: number
+      time: number
+      items: boolean
+      stageHazards: boolean
+    }
+  }
+}
+
 export default function FreeBattle() {
   const { data: session, status } = useSession()
-  const [isSearching, setIsSearching] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [matchId, setMatchId] = useState<string | null>(null)
+  const [opponent, setOpponent] = useState<Opponent | null>(null)
+  const [playerIndex, setPlayerIndex] = useState<number | null>(null)
   const [preferences, setPreferences] = useState<MatchPreferences>({
     island: 'Oʻahu',
     connection: 'wired',
@@ -32,37 +46,63 @@ export default function FreeBattle() {
     }
   })
 
+  const {
+    isSearching,
+    currentMatch,
+    matchStatus,
+    error,
+    startSearch,
+    cancelSearch,
+    leaveMatch,
+    selectCharacter,
+    banStage,
+    pickStage,
+    reportGameResult,
+    sendChatMessage
+  } = useSupabaseMatchmaking()
+
   useEffect(() => {
-    // Set up matchmaking callbacks
-    matchmakingService.onMatch((id) => {
-      setMatchId(id)
-      setIsSearching(false)
-      // TODO: Navigate to match room or show match details
-    })
-
-    matchmakingService.onError((error) => {
-      setError(error)
-      setIsSearching(false)
-    })
-
-    // Cleanup on unmount
-    return () => {
-      if (isSearching) {
-        matchmakingService.cancelSearch()
+    // Handle match status updates
+    if (matchStatus) {
+      console.log('Match status update:', matchStatus)
+      
+      if (matchStatus.type === 'match_state' && matchStatus.status === 'character_selection') {
+        // Extract opponent info from match data
+        // This would need to be fetched from the database
+        console.log('Character selection phase started')
+      } else if (matchStatus.type === 'match_state' && matchStatus.status === 'stage_striking') {
+        console.log('Stage striking phase started')
+      } else if (matchStatus.type === 'match_state' && matchStatus.status === 'active') {
+        console.log('Game is now active')
+      } else if (matchStatus.type === 'match_complete') {
+        console.log('Match completed')
       }
     }
-  }, [isSearching])
+  }, [matchStatus])
 
   const handleStartSearch = () => {
-    setError(null)
-    setMatchId(null)
-    setIsSearching(true)
-    matchmakingService.startSearch(preferences)
+    console.log('Starting search with preferences:', preferences)
+    setOpponent(null)
+    setPlayerIndex(null)
+    startSearch(preferences)
   }
 
   const handleCancelSearch = () => {
-    setIsSearching(false)
-    matchmakingService.cancelSearch()
+    cancelSearch()
+  }
+
+  const handleLeaveMatch = () => {
+    const confirmed = window.confirm('Are you sure you want to leave this match? This will disconnect you from your opponent.')
+    if (!confirmed) {
+      return
+    }
+    
+    if (currentMatch) {
+      console.log('Leaving match:', currentMatch)
+      leaveMatch(currentMatch)
+    }
+    setOpponent(null)
+    setPlayerIndex(null)
   }
 
   const isDisabled = !session;
@@ -116,12 +156,6 @@ export default function FreeBattle() {
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             {error}
-          </div>
-        )}
-        {/* Match Found Message */}
-        {matchId && (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-            Match found! Match ID: {matchId}
           </div>
         )}
         {/* Match Preferences */}
@@ -204,6 +238,16 @@ export default function FreeBattle() {
           )}
         </div>
       </div>
+
+      {/* Match Chat Modal */}
+      {currentMatch && opponent && (
+        <TournamentMatch
+          matchId={currentMatch}
+          opponent={opponent}
+          onLeaveMatch={handleLeaveMatch}
+          playerIndex={playerIndex}
+        />
+      )}
     </div>
   )
 } 
