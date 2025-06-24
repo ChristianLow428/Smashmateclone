@@ -1,0 +1,169 @@
+import { useState, useEffect, useCallback } from 'react'
+import { matchmakingService } from '../services/matchmaking'
+import { supabaseMatchmakingService } from '../services/supabase-matchmaking'
+
+export interface MatchmakingPreferences {
+  island: string
+  connection: 'wired' | 'wireless'
+  rules: {
+    stock: number
+    time: number
+    items: boolean
+    stageHazards: boolean
+  }
+}
+
+export function useUnifiedMatchmaking() {
+  const [isSearching, setIsSearching] = useState(false)
+  const [currentMatch, setCurrentMatch] = useState<string | null>(null)
+  const [matchStatus, setMatchStatus] = useState<any>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  // Determine which service to use based on environment
+  const isDevelopment = process.env.NODE_ENV === 'development'
+  const useWebSocket = isDevelopment && typeof window !== 'undefined' && window.location.hostname === 'localhost'
+
+  useEffect(() => {
+    if (useWebSocket) {
+      // Use WebSocket service for local development
+      console.log('Using WebSocket matchmaking service')
+      
+      matchmakingService.onMatch((matchId) => {
+        console.log('WebSocket: Match found:', matchId)
+        setCurrentMatch(matchId)
+        setIsSearching(false)
+      })
+
+      matchmakingService.onMatchStatus((status) => {
+        console.log('WebSocket: Match status update:', status)
+        setMatchStatus(status)
+      })
+
+      matchmakingService.onError((error) => {
+        console.error('WebSocket: Matchmaking error:', error)
+        setError(error)
+        setIsSearching(false)
+      })
+
+      return () => {
+        matchmakingService.disconnect()
+      }
+    } else {
+      // Use Supabase service for production/Vercel
+      console.log('Using Supabase matchmaking service')
+      
+      supabaseMatchmakingService.onMatch((matchId) => {
+        console.log('Supabase: Match found:', matchId)
+        setCurrentMatch(matchId)
+        setIsSearching(false)
+      })
+
+      supabaseMatchmakingService.onMatchStatus((status) => {
+        console.log('Supabase: Match status update:', status)
+        setMatchStatus(status)
+      })
+
+      supabaseMatchmakingService.onError((error) => {
+        console.error('Supabase: Matchmaking error:', error)
+        setError(error)
+        setIsSearching(false)
+      })
+
+      return () => {
+        supabaseMatchmakingService.disconnect()
+      }
+    }
+  }, [useWebSocket])
+
+  const startSearch = useCallback(async (preferences: MatchmakingPreferences, userId?: string) => {
+    setError(null)
+    setIsSearching(true)
+    
+    if (useWebSocket) {
+      matchmakingService.startSearch(preferences)
+    } else {
+      if (!userId) {
+        setError('User ID is required for Supabase matchmaking')
+        setIsSearching(false)
+        return
+      }
+      await supabaseMatchmakingService.startSearch(preferences, userId)
+    }
+  }, [useWebSocket])
+
+  const cancelSearch = useCallback(async () => {
+    setIsSearching(false)
+    if (useWebSocket) {
+      matchmakingService.cancelSearch()
+    } else {
+      await supabaseMatchmakingService.cancelSearch()
+    }
+  }, [useWebSocket])
+
+  const leaveMatch = useCallback(async (matchId: string) => {
+    setCurrentMatch(null)
+    setMatchStatus(null)
+    if (useWebSocket) {
+      matchmakingService.leaveMatch(matchId)
+    } else {
+      await supabaseMatchmakingService.leaveMatch(matchId)
+    }
+  }, [useWebSocket])
+
+  const selectCharacter = useCallback(async (matchId: string, character: string) => {
+    if (useWebSocket) {
+      matchmakingService.selectCharacter(matchId, character)
+    } else {
+      await supabaseMatchmakingService.selectCharacter(matchId, character)
+    }
+  }, [useWebSocket])
+
+  const banStage = useCallback(async (matchId: string, stage: string) => {
+    if (useWebSocket) {
+      matchmakingService.banStage(matchId, stage)
+    } else {
+      await supabaseMatchmakingService.banStage(matchId, stage)
+    }
+  }, [useWebSocket])
+
+  const pickStage = useCallback(async (matchId: string, stage: string) => {
+    if (useWebSocket) {
+      matchmakingService.pickStage(matchId, stage)
+    } else {
+      await supabaseMatchmakingService.pickStage(matchId, stage)
+    }
+  }, [useWebSocket])
+
+  const reportGameResult = useCallback(async (matchId: string, winner: number) => {
+    if (useWebSocket) {
+      matchmakingService.reportGameResult(matchId, winner)
+    } else {
+      await supabaseMatchmakingService.reportGameResult(matchId, winner)
+    }
+  }, [useWebSocket])
+
+  const sendChatMessage = useCallback(async (matchId: string, content: string) => {
+    if (useWebSocket) {
+      // WebSocket chat is handled through the WebSocket
+      console.log('Chat message:', content)
+    } else {
+      await supabaseMatchmakingService.sendChatMessage(matchId, content)
+    }
+  }, [useWebSocket])
+
+  return {
+    isSearching,
+    currentMatch,
+    matchStatus,
+    error,
+    startSearch,
+    cancelSearch,
+    leaveMatch,
+    selectCharacter,
+    banStage,
+    pickStage,
+    reportGameResult,
+    sendChatMessage,
+    useWebSocket // Expose this for debugging
+  }
+} 

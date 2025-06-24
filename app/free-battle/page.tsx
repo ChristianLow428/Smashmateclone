@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useMatchmaking } from '../hooks/useMatchmaking'
+import { useUnifiedMatchmaking } from '../hooks/useUnifiedMatchmaking'
 import Image from 'next/image'
 import { useSession, signIn } from 'next-auth/react'
 import TournamentMatch from '../components/TournamentMatch'
@@ -58,22 +58,32 @@ export default function FreeBattle() {
     banStage,
     pickStage,
     reportGameResult,
-    sendChatMessage
-  } = useMatchmaking()
+    sendChatMessage,
+    useWebSocket
+  } = useUnifiedMatchmaking()
 
   useEffect(() => {
     // Handle match status updates
     if (matchStatus) {
       console.log('Match status update:', matchStatus)
       
-      if (matchStatus.type === 'match' && matchStatus.status === 'character_selection') {
-        // Set opponent and player index from the match message
+      // Handle WebSocket match messages
+      if (useWebSocket && matchStatus.type === 'match' && matchStatus.status === 'character_selection') {
         setOpponent(matchStatus.opponent)
         setPlayerIndex(matchStatus.playerIndex)
-        console.log('Character selection phase started')
+        console.log('WebSocket: Character selection phase started')
         console.log('Opponent:', matchStatus.opponent)
         console.log('Player index:', matchStatus.playerIndex)
-      } else if (matchStatus.type === 'match_state' && matchStatus.status === 'stage_striking') {
+      }
+      // Handle Supabase match messages
+      else if (!useWebSocket && matchStatus.type === 'match' && matchStatus.status === 'character_selection') {
+        setOpponent(matchStatus.opponent)
+        setPlayerIndex(matchStatus.playerIndex)
+        console.log('Supabase: Character selection phase started')
+        console.log('Opponent:', matchStatus.opponent)
+        console.log('Player index:', matchStatus.playerIndex)
+      }
+      else if (matchStatus.type === 'match_state' && matchStatus.status === 'stage_striking') {
         console.log('Stage striking phase started')
       } else if (matchStatus.type === 'match_state' && matchStatus.status === 'active') {
         console.log('Game is now active')
@@ -81,7 +91,7 @@ export default function FreeBattle() {
         console.log('Match completed')
       }
     }
-  }, [matchStatus])
+  }, [matchStatus, useWebSocket])
 
   const handleStartSearch = () => {
     console.log('Starting search with preferences:', preferences)
@@ -92,9 +102,15 @@ export default function FreeBattle() {
       return
     }
     
+    const userId = (session.user as any)?.id
+    if (!userId) {
+      console.error('No user ID in session')
+      return
+    }
+    
     setOpponent(null)
     setPlayerIndex(null)
-    startSearch(preferences)
+    startSearch(preferences, userId)
   }
 
   const handleCancelSearch = () => {
