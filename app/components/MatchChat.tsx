@@ -241,11 +241,36 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
   }, [opponentLeft])
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !session?.user?.email || opponentLeft) {
+    console.log('sendMessage called:', {
+      newMessage: newMessage.trim(),
+      sessionEmail: session?.user?.email,
+      opponentLeft,
+      isConnected,
+      usePolling
+    })
+    
+    if (!newMessage.trim()) {
+      console.log('Message is empty, not sending')
+      return
+    }
+    
+    if (!session?.user?.email) {
+      console.log('No session email, not sending')
+      return
+    }
+    
+    if (opponentLeft) {
+      console.log('Opponent left, not sending')
+      return
+    }
+    
+    if (!isConnected) {
+      console.log('Not connected, not sending')
       return
     }
 
     try {
+      console.log('Attempting to send message to database')
       const { error } = await supabase
         .from('match_chat_messages')
         .insert({
@@ -259,7 +284,8 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
         return
       }
 
-    setNewMessage('')
+      console.log('Message sent successfully')
+      setNewMessage('')
     } catch (error) {
       console.error('Error sending message:', error)
     }
@@ -386,11 +412,11 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
             onKeyPress={handleKeyPress}
             placeholder={opponentLeft ? "Opponent left" : "Type message..."}
             className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-            disabled={!isConnected || opponentLeft}
+            disabled={opponentLeft}
           />
           <button
             onClick={sendMessage}
-            disabled={!isConnected || !newMessage.trim() || opponentLeft}
+            disabled={!newMessage.trim() || opponentLeft}
             className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Send

@@ -35,6 +35,7 @@ export default function FreeBattle() {
   const { data: session, status } = useSession()
   const [opponent, setOpponent] = useState<Opponent | null>(null)
   const [playerIndex, setPlayerIndex] = useState<number | null>(null)
+  const [matchEnded, setMatchEnded] = useState<boolean>(false)
   const [preferences, setPreferences] = useState<MatchPreferences>({
     island: 'Oʻahu',
     connection: 'wired',
@@ -74,6 +75,7 @@ export default function FreeBattle() {
       if (useWebSocket && matchStatus.type === 'match' && matchStatus.status === 'character_selection') {
         setOpponent(matchStatus.opponent)
         setPlayerIndex(matchStatus.playerIndex)
+        setMatchEnded(false)
         console.log('WebSocket: Character selection phase started')
         console.log('Opponent:', matchStatus.opponent)
         console.log('Player index:', matchStatus.playerIndex)
@@ -82,6 +84,7 @@ export default function FreeBattle() {
       else if (!useWebSocket && matchStatus.type === 'match' && matchStatus.status === 'character_selection') {
         setOpponent(matchStatus.opponent)
         setPlayerIndex(matchStatus.playerIndex)
+        setMatchEnded(false)
         console.log('Supabase: Character selection phase started')
         console.log('Opponent:', matchStatus.opponent)
         console.log('Player index:', matchStatus.playerIndex)
@@ -90,6 +93,7 @@ export default function FreeBattle() {
       else if (matchStatus.type === 'match_state' && matchStatus.opponent) {
         setOpponent(matchStatus.opponent)
         setPlayerIndex(matchStatus.playerIndex)
+        setMatchEnded(false)
         console.log('Reconnecting to existing match:')
         console.log('Opponent:', matchStatus.opponent)
         console.log('Player index:', matchStatus.playerIndex)
@@ -101,6 +105,10 @@ export default function FreeBattle() {
         console.log('Game is now active')
       } else if (matchStatus.type === 'match_complete') {
         console.log('Match completed')
+        setMatchEnded(true)
+      } else if (matchStatus.type === 'opponent_left') {
+        console.log('Opponent left')
+        setMatchEnded(true)
       }
     }
   }, [matchStatus, useWebSocket, opponent, playerIndex, currentMatch])
@@ -172,6 +180,7 @@ export default function FreeBattle() {
     // Clear local state immediately
     setOpponent(null)
     setPlayerIndex(null)
+    setMatchEnded(true)
     
     console.log('Match left, state cleared')
   }
@@ -311,9 +320,9 @@ export default function FreeBattle() {
       </div>
 
       {/* Match Chat Modal */}
-      {currentMatch && opponent && (
+      {(currentMatch && opponent) || (matchEnded && opponent) ? (
         <TournamentMatch
-          matchId={currentMatch}
+          matchId={currentMatch || 'ended'}
           opponent={opponent}
           onLeaveMatch={handleLeaveMatch}
           playerIndex={playerIndex}
@@ -322,8 +331,9 @@ export default function FreeBattle() {
           pickStage={pickStage}
           reportGameResult={reportGameResult}
           matchStatus={matchStatus}
+          matchEnded={matchEnded}
         />
-      )}
+      ) : null}
     </div>
   )
 } 

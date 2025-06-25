@@ -27,6 +27,7 @@ interface TournamentMatchProps {
   pickStage: (matchId: string, stage: string) => Promise<void>
   reportGameResult: (matchId: string, winner: number) => Promise<void>
   matchStatus: any // Pass matchStatus as prop instead of callback
+  matchEnded?: boolean
 }
 
 type MatchStatus = 'character_selection' | 'stage_striking' | 'active' | 'completed'
@@ -63,7 +64,7 @@ const CHARACTERS = [
   'Kazuya', 'Sora'
 ]
 
-export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playerIndex, selectCharacter, banStage, pickStage, reportGameResult, matchStatus }: TournamentMatchProps) {
+export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playerIndex, selectCharacter, banStage, pickStage, reportGameResult, matchStatus, matchEnded }: TournamentMatchProps) {
   const { data: session } = useSession()
   const [matchStatusState, setMatchStatusState] = useState<MatchStatus>('character_selection')
   const [selectedCharacter, setSelectedCharacter] = useState<string>('')
@@ -184,6 +185,7 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
         setGameResultConflict(false)
         setPendingResult(null)
         setConflictResult(null)
+        if (opponentLeft) setShowChat(true)
       } else if (matchStatus.type === 'game_result_pending') {
         setGameResultPending(true)
         setGameResultConflict(false)
@@ -656,6 +658,30 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
     </div>
   )
 
+  const renderMatchEnded = () => (
+    <div className="bg-white rounded-lg shadow-md p-6 mb-4">
+      <h2 className="text-xl font-semibold mb-4 text-center">Match Ended</h2>
+      
+      <div className="text-center mb-6">
+        <p className="text-lg text-gray-600 mb-4">
+          {opponentLeft ? 'Your opponent has left the match.' : 'The match has ended.'}
+        </p>
+        <p className="text-sm text-gray-500">
+          You can review the chat history below or return to find a new match.
+        </p>
+      </div>
+      
+      <div className="text-center">
+        <button
+          onClick={onLeaveMatch}
+          className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 transition-colors"
+        >
+          Return to Free Battle
+        </button>
+      </div>
+    </div>
+  )
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-gray-100 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6">
@@ -674,8 +700,11 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
           </div>
           <div className="flex items-center space-x-4">
             <button
-              onClick={() => setShowChat(!showChat)}
-              className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+              onClick={() => {
+                if (!opponentLeft && matchStatusState !== 'completed') setShowChat(!showChat)
+              }}
+              className={`px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 ${opponentLeft || matchStatusState === 'completed' ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={opponentLeft || matchStatusState === 'completed'}
             >
               {showChat ? 'Hide Chat' : 'Show Chat'}
             </button>
@@ -695,6 +724,7 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
             {matchStatusState === 'stage_striking' && renderStageStriking()}
             {matchStatusState === 'active' && renderGameActive()}
             {matchStatusState === 'completed' && renderMatchComplete()}
+            {matchEnded && renderMatchEnded()}
           </div>
 
           {/* Chat Sidebar */}
