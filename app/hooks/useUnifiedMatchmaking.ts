@@ -1,16 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabaseMatchmakingService } from '../services/supabase-matchmaking'
+import { supabaseMatchmakingService, MatchmakingPreferences } from '../services/supabase-matchmaking'
 
-export interface MatchmakingPreferences {
-  island: string
-  connection: 'wired' | 'wireless'
-  rules: {
-    stock: number
-    time: number
-    items: boolean
-    stageHazards: boolean
-  }
-}
+// Determine if we should use WebSocket or Supabase
+// Use WebSocket only for local development, Supabase for production
+const useWebSocket = process.env.NODE_ENV === 'development' && 
+                    typeof window !== 'undefined' && 
+                    window.location.hostname === 'localhost'
 
 export function useUnifiedMatchmaking() {
   const [isSearching, setIsSearching] = useState(false)
@@ -18,24 +13,10 @@ export function useUnifiedMatchmaking() {
   const [matchStatus, setMatchStatus] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
 
-  // Determine which service to use based on environment
-  const isDevelopment = process.env.NODE_ENV === 'development'
-  const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost'
-  const useWebSocket = isDevelopment && isLocalhost
-
-  // Debug logging
-  console.log('Environment detection:', {
-    NODE_ENV: process.env.NODE_ENV,
-    hostname: typeof window !== 'undefined' ? window.location.hostname : 'server-side',
-    isDevelopment,
-    isLocalhost,
-    useWebSocket
-  })
-
   useEffect(() => {
     if (useWebSocket) {
       // Use WebSocket service for local development - lazy load it
-      console.log('Using WebSocket matchmaking service')
+      console.log('Using WebSocket matchmaking service (local development)')
       
       // Dynamically import the WebSocket service only when needed
       import('../services/matchmaking').then(({ matchmakingService }) => {
@@ -55,6 +36,10 @@ export function useUnifiedMatchmaking() {
           setError(error)
           setIsSearching(false)
         })
+      }).catch((error) => {
+        console.error('Failed to load WebSocket service, falling back to Supabase:', error)
+        // Fallback to Supabase if WebSocket fails to load
+        setupSupabaseCallbacks()
       })
 
       return () => {
@@ -62,8 +47,16 @@ export function useUnifiedMatchmaking() {
       }
     } else {
       // Use Supabase service for production/Vercel
-      console.log('Using Supabase matchmaking service')
+      console.log('Using Supabase matchmaking service (production)')
+      setupSupabaseCallbacks()
       
+      return () => {
+        supabaseMatchmakingService.disconnect()
+      }
+    }
+  }, [])
+
+  const setupSupabaseCallbacks = () => {
       supabaseMatchmakingService.onMatch((matchId) => {
         console.log('Supabase: Match found:', matchId)
         setCurrentMatch(matchId)
@@ -80,12 +73,7 @@ export function useUnifiedMatchmaking() {
         setError(error)
         setIsSearching(false)
       })
-
-      return () => {
-        supabaseMatchmakingService.disconnect()
-      }
     }
-  }, [useWebSocket])
 
   const startSearch = useCallback(async (preferences: MatchmakingPreferences, userId?: string) => {
     setError(null)

@@ -9,7 +9,8 @@
     "lint": "next lint",
     "build:server": "tsc -p server/tsconfig.json",
     "start:server": "node server/dist/index.js",
-    "dev:server": "tsc -p server/tsconfig.json && node server/dist/index.js"
+    "dev:server": "tsc -p server/tsconfig.json && node server/dist/index.js",
+    "test:supabase": "node scripts/test-supabase.js"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.9.1",

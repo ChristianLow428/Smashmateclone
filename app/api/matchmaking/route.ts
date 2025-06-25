@@ -4,9 +4,6 @@ import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
-// Store active matchmaking requests
-const matchmakingQueue: { userId: string; timestamp: number }[] = [];
-
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   const supabase = createClient(cookies());
@@ -16,58 +13,105 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { userId } = await request.json();
-    const currentTime = Date.now();
-
-    // Remove expired requests (older than 5 minutes)
-    const validRequests = matchmakingQueue.filter(
-      request => currentTime - request.timestamp < 300000
-    );
-
-    // Check if there's a match
-    const potentialMatch = validRequests.find(request => request.userId !== userId);
+    const { userId, preferences } = await request.json();
     
-    if (potentialMatch) {
-      // Create a chat room
-      const { data: chatRoom, error: chatError } = await supabase
-        .from('chat_rooms')
+    if (!userId) {
+      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    }
+
+    // Insert or update player in matchmaking queue
+    const { data: player, error: insertError } = await supabase
+      .from('matchmaking_players')
+      .upsert({
+        id: userId,
+        status: 'searching',
+        preferences: preferences,
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Error inserting player:', insertError);
+      return NextResponse.json({ error: 'Failed to join queue' }, { status: 500 });
+    }
+
+    // Try to find a match
+    const { data: opponents, error: findError } = await supabase
+      .from('matchmaking_players')
+      .select('*')
+      .eq('status', 'searching')
+      .neq('id', userId)
+      .limit(10); // Get more candidates and filter in JS
+
+    if (findError) {
+      console.error('Error finding opponents:', findError);
+      return NextResponse.json({ status: 'searching', player });
+    }
+
+    // Filter by island preference in JavaScript
+    const compatibleOpponents = opponents?.filter(opponent => 
+      opponent.preferences?.island === preferences.island
+    ) || [];
+
+    if (compatibleOpponents.length > 0) {
+      const opponent = compatibleOpponents[0];
+      
+      // Create a match
+      const { data: match, error: matchError } = await supabase
+        .from('matches')
         .insert({
-          participants: [userId, potentialMatch.userId],
-          created_at: new Date().toISOString()
+          player1_id: userId,
+          player2_id: opponent.id,
+          status: 'character_selection',
+          stage_striking: {
+            currentPlayer: 0,
+            strikesRemaining: 1,
+            availableStages: ["Battlefield", "Final Destination", "Hollow Bastion", "Pokemon Stadium 2", "Small Battlefield"],
+            bannedStages: []
+          },
+          character_selection: {
+            player1Character: null,
+            player2Character: null,
+            bothReady: false
+          },
+          game_result_validation: {
+            player1Reported: null,
+            player2Reported: null,
+            bothReported: false
+          }
         })
         .select()
         .single();
 
-      if (chatError) throw chatError;
+      if (matchError) {
+        console.error('Error creating match:', matchError);
+        return NextResponse.json({ status: 'searching', player });
+      }
 
-      // Remove both users from queue
-      matchmakingQueue.splice(matchmakingQueue.indexOf(potentialMatch), 1);
-      matchmakingQueue.splice(matchmakingQueue.findIndex(r => r.userId === userId), 1);
+      // Update both players to in_match status
+      await supabase
+        .from('matchmaking_players')
+        .update({ status: 'in_match' })
+        .in('id', [userId, opponent.id]);
 
       return NextResponse.json({
         status: 'matched',
-        chatRoomId: chatRoom.id,
-        opponentId: potentialMatch.userId
+        matchId: match.id,
+        opponent: opponent
       });
     }
 
-    // Add user to queue if not already present
-    if (!matchmakingQueue.find(r => r.userId === userId)) {
-      matchmakingQueue.push({
-        userId,
-        timestamp: currentTime
-      });
-    }
-
-    return NextResponse.json({ status: 'searching' });
+    return NextResponse.json({ status: 'searching', player });
   } catch (error) {
     console.error('Matchmaking error:', error);
-    return NextResponse.json({ error: 'Failed to process matchmaking' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
 export async function DELETE(request: Request) {
   const session = await getServerSession(authOptions);
+  const supabase = createClient(cookies());
   
   if (!session?.user?.email) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -76,15 +120,19 @@ export async function DELETE(request: Request) {
   try {
     const { userId } = await request.json();
     
-    // Remove user from queue
-    const index = matchmakingQueue.findIndex(r => r.userId === userId);
-    if (index !== -1) {
-      matchmakingQueue.splice(index, 1);
+    if (!userId) {
+      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
+
+    // Remove player from matchmaking queue
+    await supabase
+      .from('matchmaking_players')
+      .update({ status: 'offline' })
+      .eq('id', userId);
 
     return NextResponse.json({ status: 'cancelled' });
   } catch (error) {
     console.error('Cancel matchmaking error:', error);
-    return NextResponse.json({ error: 'Failed to cancel matchmaking' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 } 

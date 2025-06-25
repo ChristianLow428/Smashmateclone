@@ -67,9 +67,10 @@ class SupabaseMatchmakingService {
 
   private async initializeRealtime() {
     try {
+      console.log('Initializing Supabase real-time subscriptions...')
+      
       // Subscribe to matchmaking_players table for finding opponents
-      const playersChannel = supabase
-        .channel('matchmaking_players')
+      const playersChannel = supabase.channel('matchmaking_players')
         .on(
           'postgres_changes',
           {
@@ -78,6 +79,7 @@ class SupabaseMatchmakingService {
             table: 'matchmaking_players'
           },
           (payload) => {
+            console.log('Player joined:', payload.new)
             this.handlePlayerJoined(payload.new)
           }
         )
@@ -89,6 +91,7 @@ class SupabaseMatchmakingService {
             table: 'matchmaking_players'
           },
           (payload) => {
+            console.log('Player updated:', payload.new)
             this.handlePlayerUpdated(payload.new)
           }
         )
@@ -96,11 +99,20 @@ class SupabaseMatchmakingService {
           console.log('Supabase Realtime subscription status:', status)
           if (status === 'SUBSCRIBED') {
             console.log('Realtime subscription successful')
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
             console.log('Realtime subscription failed, falling back to polling')
             this.startPolling()
           }
         })
+
+      // Set a timeout to check if subscription is working
+      setTimeout(() => {
+        if (!this.pollingInterval) {
+          console.log('Realtime subscription timeout, starting polling fallback')
+          this.startPolling()
+        }
+      }, 5000) // 5 second timeout
+      
     } catch (error) {
       console.error('Error initializing realtime:', error)
       console.log('Falling back to polling mechanism')
@@ -161,27 +173,56 @@ class SupabaseMatchmakingService {
     if (!this.currentPlayerId) return
 
     try {
+      console.log('tryMatchPlayers: Getting our player data for ID:', this.currentPlayerId)
+      
       // Get our preferences
-      const { data: ourPlayer } = await supabase
+      const { data: ourPlayer, error: ourPlayerError } = await supabase
         .from('matchmaking_players')
         .select('*')
         .eq('id', this.currentPlayerId)
         .single()
 
-      if (!ourPlayer) return
+      if (ourPlayerError) {
+        console.error('Error getting our player data:', ourPlayerError)
+        return
+      }
 
-      // Find a compatible opponent
-      const { data: opponents } = await supabase
+      if (!ourPlayer) {
+        console.log('No player data found for ID:', this.currentPlayerId)
+        return
+      }
+
+      console.log('tryMatchPlayers: Found our player data:', ourPlayer)
+
+      // Find a compatible opponent - use a different approach for JSONB query
+      console.log('tryMatchPlayers: Searching for opponents...')
+      const { data: opponents, error } = await supabase
         .from('matchmaking_players')
         .select('*')
         .eq('status', 'searching')
         .neq('id', this.currentPlayerId)
-        .eq('preferences->island', ourPlayer.preferences.island)
-        .limit(1)
+        .limit(10) // Get more candidates and filter in JS
 
-      if (opponents && opponents.length > 0) {
-        const opponent = opponents[0]
+      if (error) {
+        console.error('Error finding opponents:', error)
+        return
+      }
+
+      console.log('tryMatchPlayers: Found opponents:', opponents?.length || 0)
+
+      // Filter by island preference in JavaScript
+      const compatibleOpponents = opponents?.filter(opponent => 
+        opponent.preferences?.island === ourPlayer.preferences.island
+      ) || []
+
+      console.log('tryMatchPlayers: Compatible opponents:', compatibleOpponents.length)
+
+      if (compatibleOpponents.length > 0) {
+        const opponent = compatibleOpponents[0]
+        console.log('tryMatchPlayers: Creating match with opponent:', opponent.id)
         await this.createMatch(ourPlayer, opponent)
+      } else {
+        console.log('tryMatchPlayers: No compatible opponents found')
       }
     } catch (error) {
       console.error('Error trying to match players:', error)
@@ -237,12 +278,17 @@ class SupabaseMatchmakingService {
 
     try {
       // Find matches that reference our player ID directly
-      const { data: match } = await supabase
+      const { data: match, error } = await supabase
         .from('matches')
         .select('*')
         .or(`player1_id.eq.${this.currentPlayerId},player2_id.eq.${this.currentPlayerId}`)
         .eq('status', 'character_selection')
         .single()
+
+      if (error) {
+        console.error('Error finding match:', error)
+        return
+      }
 
       if (match) {
         this.currentMatchId = match.id
@@ -256,8 +302,7 @@ class SupabaseMatchmakingService {
 
   private subscribeToMatch(matchId: string) {
     // Subscribe to match updates
-    this.matchChannel = supabase
-      .channel(`match:${matchId}`)
+    this.matchChannel = supabase.channel(`match:${matchId}`)
       .on(
         'postgres_changes',
         {
@@ -273,8 +318,7 @@ class SupabaseMatchmakingService {
       .subscribe()
 
     // Subscribe to chat messages
-    this.chatChannel = supabase
-      .channel(`chat:${matchId}`)
+    this.chatChannel = supabase.channel(`chat:${matchId}`)
       .on(
         'postgres_changes',
         {
