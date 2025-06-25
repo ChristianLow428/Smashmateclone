@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { supabase } from '@/utils/supabase/client'
 
@@ -31,11 +31,7 @@ interface MatchChatProps {
   opponentLeft?: boolean
 }
 
-export interface MatchChatRef {
-  addSystemMessage: (message: string) => void
-}
-
-const MatchChat = forwardRef<MatchChatRef, MatchChatProps>(({ matchId, opponent, onLeaveMatch, opponentLeft = false }, ref) => {
+export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLeft = false }: MatchChatProps) {
   const { data: session } = useSession()
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
@@ -45,19 +41,13 @@ const MatchChat = forwardRef<MatchChatRef, MatchChatProps>(({ matchId, opponent,
   const pollingInterval = useRef<NodeJS.Timeout | null>(null)
   const [usePolling, setUsePolling] = useState(false)
 
-  // Expose methods to parent component
-  useImperativeHandle(ref, () => ({
-    addSystemMessage: (message: string) => {
-      const systemMessage: Message = {
-        id: `system-${Date.now()}`,
-        sender: 'System',
-        content: message,
-        timestamp: new Date(),
-        type: 'system'
-      }
-      setMessages(prev => [...prev, systemMessage])
-    }
-  }))
+  console.log('MatchChat render:', {
+    matchId,
+    opponentLeft,
+    messagesCount: messages.length,
+    isConnected,
+    usePolling
+  })
 
   useEffect(() => {
     // Load existing chat messages
@@ -86,7 +76,11 @@ const MatchChat = forwardRef<MatchChatRef, MatchChatProps>(({ matchId, opponent,
           type: 'user' as const
         }))
 
-        setMessages(chatMessages)
+        // Preserve system messages when loading initial messages
+        setMessages(prev => {
+          const systemMessages = prev.filter(msg => msg.type === 'system')
+          return [...chatMessages, ...systemMessages]
+        })
       } catch (error) {
         console.error('Error loading messages:', error)
         // If there's an error, just start with empty messages
@@ -126,7 +120,11 @@ const MatchChat = forwardRef<MatchChatRef, MatchChatProps>(({ matchId, opponent,
             type: 'user' as const
           }))
 
-          setMessages(chatMessages)
+          // Preserve system messages when updating from polling
+          setMessages(prev => {
+            const systemMessages = prev.filter(msg => msg.type === 'system')
+            return [...chatMessages, ...systemMessages]
+          })
         } catch (error) {
           console.error('Error polling messages:', error)
           // Don't update messages on error, just continue polling
@@ -246,7 +244,14 @@ const MatchChat = forwardRef<MatchChatRef, MatchChatProps>(({ matchId, opponent,
 
   // Add system message when opponent leaves
   useEffect(() => {
+    console.log('opponentLeft useEffect triggered:', {
+      opponentLeft,
+      currentMessagesCount: messages.length,
+      matchId
+    })
+    
     if (opponentLeft) {
+      console.log('Adding system message for opponent left')
       const systemMessage: Message = {
         id: `system-${Date.now()}`,
         sender: 'System',
@@ -254,9 +259,15 @@ const MatchChat = forwardRef<MatchChatRef, MatchChatProps>(({ matchId, opponent,
         timestamp: new Date(),
         type: 'system'
       }
-      setMessages(prev => [...prev, systemMessage])
+      console.log('System message created:', systemMessage)
+      setMessages(prev => {
+        console.log('Previous messages count:', prev.length)
+        const newMessages = [...prev, systemMessage]
+        console.log('New messages count:', newMessages.length)
+        return newMessages
+      })
     }
-  }, [opponentLeft])
+  }, [opponentLeft, matchId])
 
   const sendMessage = async () => {
     console.log('sendMessage called:', {
@@ -443,6 +454,4 @@ const MatchChat = forwardRef<MatchChatRef, MatchChatProps>(({ matchId, opponent,
       </div>
     </div>
   )
-})
-
-export default MatchChat 
+} 
