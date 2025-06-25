@@ -1044,6 +1044,15 @@ class SupabaseMatchmakingService {
                 bannedStages: []
               }
               
+              console.log('Initializing stage striking for next game:', {
+                game: newCurrentGame,
+                stagePool,
+                firstPlayer,
+                strikesRemaining,
+                availableStages: stageStriking.availableStages,
+                bannedStages: stageStriking.bannedStages
+              })
+              
               // Update the match with stage striking data
               await supabase
                 .from('matches')
@@ -1062,7 +1071,8 @@ class SupabaseMatchmakingService {
                 player2Score: newPlayer2Score,
                 currentPlayer: stageStriking.currentPlayer,
                 strikesRemaining: stageStriking.strikesRemaining,
-                availableStages: stageStriking.availableStages
+                availableStages: stageStriking.availableStages,
+                bannedStages: stageStriking.bannedStages
               })
             } else {
               // Match is complete, just send the status update
