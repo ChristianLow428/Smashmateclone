@@ -55,7 +55,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
         }
 
         const chatMessages = data.map(msg => ({
-            id: msg.id,
+          id: msg.id,
           sender: session?.user && msg.sender_id === session.user.email
             ? session.user.name || 'You'
             : 'Opponent',
@@ -72,37 +72,74 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
 
     loadMessages()
 
-    // Subscribe to new chat messages
-    chatChannel.current = supabase
-      .channel(`chat:${matchId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'match_chat_messages',
-          filter: `match_id=eq.${matchId}`
-        },
-        (payload) => {
-          const newMessage = payload.new
-          const message: Message = {
-            id: newMessage.id,
-            sender: session?.user && newMessage.sender_id === session.user.email
-              ? session.user.name || 'You'
-              : 'Opponent',
-            content: newMessage.content,
-            timestamp: new Date(newMessage.created_at),
-            type: 'user'
+    // Subscribe to new chat messages with better error handling
+    const setupChatSubscription = async () => {
+      try {
+        console.log('Setting up chat subscription for match:', matchId)
+        
+        chatChannel.current = supabase
+          .channel(`chat:${matchId}`)
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'match_chat_messages',
+              filter: `match_id=eq.${matchId}`
+            },
+            (payload) => {
+              console.log('Received chat message:', payload)
+              const newMessage = payload.new
+              const message: Message = {
+                id: newMessage.id,
+                sender: session?.user && newMessage.sender_id === session.user.email
+                  ? session.user.name || 'You'
+                  : 'Opponent',
+                content: newMessage.content,
+                timestamp: new Date(newMessage.created_at),
+                type: 'user'
+              }
+              setMessages(prev => [...prev, message])
+            }
+          )
+          .subscribe((status) => {
+            console.log('Chat subscription status:', status)
+            setIsConnected(status === 'SUBSCRIBED')
+            
+            if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+              console.error('Chat subscription failed, retrying...')
+              setTimeout(() => {
+                if (chatChannel.current) {
+                  supabase.removeChannel(chatChannel.current)
+                  setupChatSubscription()
+                }
+              }, 1000)
+            }
+          })
+
+        // Test the connection by sending a system message
+        setTimeout(() => {
+          if (isConnected) {
+            console.log('Chat connection test successful')
+          } else {
+            console.log('Chat connection test failed, retrying...')
+            if (chatChannel.current) {
+              supabase.removeChannel(chatChannel.current)
+              setupChatSubscription()
+            }
           }
-          setMessages(prev => [...prev, message])
-        }
-      )
-      .subscribe((status) => {
-        console.log('Chat subscription status:', status)
-        setIsConnected(status === 'SUBSCRIBED')
-      })
+        }, 2000)
+
+      } catch (error) {
+        console.error('Error setting up chat subscription:', error)
+        setIsConnected(false)
+      }
+    }
+
+    setupChatSubscription()
 
     return () => {
+      console.log('Cleaning up chat subscription')
       if (chatChannel.current) {
         supabase.removeChannel(chatChannel.current)
       }

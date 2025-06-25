@@ -465,6 +465,8 @@ class SupabaseMatchmakingService {
   }
 
   private subscribeToMatch(matchId: string) {
+    console.log('Setting up match subscription for:', matchId)
+    
     // Subscribe to match updates
     this.matchChannel = supabase
       .channel(`match:${matchId}`)
@@ -477,10 +479,22 @@ class SupabaseMatchmakingService {
           filter: `id=eq.${matchId}`
         },
         (payload) => {
+          console.log('Match update received:', payload)
           this.handleMatchUpdate(payload)
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log('Match subscription status:', status)
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error('Match subscription failed, retrying...')
+          setTimeout(() => {
+            if (this.matchChannel) {
+              supabase.removeChannel(this.matchChannel)
+              this.subscribeToMatch(matchId)
+            }
+          }, 1000)
+        }
+      })
 
     // Subscribe to chat messages
     this.chatChannel = supabase
@@ -494,10 +508,13 @@ class SupabaseMatchmakingService {
           filter: `match_id=eq.${matchId}`
         },
         (payload) => {
+          console.log('Chat message received:', payload)
           this.handleChatMessage(payload.new)
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log('Chat subscription status:', status)
+      })
   }
 
   private async handleMatchUpdate(payload: any) {
@@ -696,6 +713,8 @@ class SupabaseMatchmakingService {
 
   public async selectCharacter(matchId: string, character: string) {
     try {
+      console.log(`Player ${this.currentPlayerId} selecting character: ${character}`)
+      
       const { data: match } = await supabase
         .from('matches')
         .select('*')
@@ -714,17 +733,31 @@ class SupabaseMatchmakingService {
       }
 
       // Check if both players have selected
-      if (characterSelection.player1Character && characterSelection.player2Character) {
-        characterSelection.bothReady = true
+      const bothReady = characterSelection.player1Character && characterSelection.player2Character
+      characterSelection.bothReady = bothReady
+
+      console.log(`Character selection update: player1=${characterSelection.player1Character}, player2=${characterSelection.player2Character}, bothReady=${bothReady}`)
+
+      const updateData: any = {
+        character_selection: characterSelection
       }
 
-      await supabase
+      // If both players are ready, transition to stage_striking
+      if (bothReady) {
+        updateData.status = 'stage_striking'
+        console.log('Both characters selected, transitioning to stage_striking')
+      }
+
+      const { error } = await supabase
         .from('matches')
-        .update({
-          character_selection: characterSelection,
-          status: characterSelection.bothReady ? 'stage_striking' : 'character_selection'
-        })
+        .update(updateData)
         .eq('id', matchId)
+
+      if (error) {
+        console.error('Error updating character selection:', error)
+      } else {
+        console.log('Character selection updated successfully')
+      }
     } catch (error) {
       console.error('Error selecting character:', error)
     }
