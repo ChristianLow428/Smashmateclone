@@ -316,6 +316,51 @@ class SupabaseMatchmakingService {
         this.pollingInterval = null
         console.log('Stopped polling - match found')
       }
+
+      // Set the current match ID and trigger UI callbacks
+      this.currentMatchId = match.id
+      
+      // Get opponent information
+      const opponentId = match.player1_id === this.currentPlayerId ? match.player2_id : match.player1_id
+      const { data: opponent } = await supabase
+        .from('matchmaking_players')
+        .select('*')
+        .eq('id', opponentId)
+        .single()
+
+      if (!opponent) {
+        console.error('Opponent not found in matchmaking_players table')
+        return
+      }
+
+      // Determine player index
+      const playerIndex = match.player1_id === this.currentPlayerId ? 0 : 1
+
+      console.log('Opponent found:', opponent.id, 'Player index:', playerIndex)
+
+      // Subscribe to match updates
+      this.subscribeToMatch(match.id)
+      
+      // Trigger match callback
+      this.onMatchCallback?.(match.id)
+      
+      // Send match status update with opponent info
+      this.onMatchStatusCallback?.({
+        type: 'match_state',
+        matchId: match.id,
+        status: match.status,
+        currentGame: match.current_game,
+        player1Score: match.player1_score,
+        player2Score: match.player2_score,
+        selectedStage: match.selected_stage,
+        currentPlayer: match.stage_striking?.currentPlayer,
+        strikesRemaining: match.stage_striking?.strikesRemaining,
+        availableStages: match.stage_striking?.availableStages,
+        player1Character: match.character_selection?.player1Character,
+        player2Character: match.character_selection?.player2Character,
+        playerIndex: playerIndex,
+        opponent: opponent // Include opponent information
+      })
       
     } catch (error) {
       console.error('Error creating match:', error)
