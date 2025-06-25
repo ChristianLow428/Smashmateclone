@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
+import { supabase } from '@/utils/supabase/client'
 
 interface Message {
   id: string
@@ -36,99 +37,102 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
   const [isConnected, setIsConnected] = useState(false)
   const [opponentLeft, setOpponentLeft] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const wsRef = useRef<WebSocket | null>(null)
+  const chatChannel = useRef<any>(null)
 
   useEffect(() => {
-    // Connect to match chat WebSocket
-    const wsUrl = process.env.NODE_ENV === 'development' 
-      ? `ws://localhost:3001/match/${matchId}`
-      : `wss://your-production-websocket-url.com/match/${matchId}`
-
-    console.log('Connecting to match chat at:', wsUrl)
-    const ws = new WebSocket(wsUrl)
-    wsRef.current = ws
-
-    ws.onopen = () => {
-      setIsConnected(true)
-      console.log('Connected to match chat')
-    }
-
-    ws.onmessage = (event) => {
+    // Load existing chat messages
+    const loadMessages = async () => {
       try {
-        const data = JSON.parse(event.data)
-        console.log('Received chat message:', data)
-        
-        if (data.type === 'chat') {
-          setMessages(prev => [...prev, {
-            id: data.id,
-            sender: data.sender,
-            content: data.content,
-            timestamp: new Date(data.timestamp),
-            type: 'user'
-          }])
-        } else if (data.type === 'chat_history') {
-          // Load existing chat messages
-          const historyMessages = data.messages.map((msg: any) => ({
-            id: msg.id,
-            sender: msg.sender,
-            content: msg.content,
-            timestamp: new Date(msg.timestamp),
-            type: 'user'
-          }))
-          setMessages(historyMessages)
-        } else if (data.type === 'opponent_left') {
-          console.log('Opponent left message received:', data)
-          setOpponentLeft(true)
-          const systemMessage = {
-            id: `system-${Date.now()}`,
-            sender: 'System',
-            content: data.message || 'Your opponent has left the match.',
-            timestamp: new Date(),
-            type: 'system' as const
-          }
-          console.log('Adding system message:', systemMessage)
-          setMessages(prev => [...prev, systemMessage])
+        const { data, error } = await supabase
+          .from('match_chat_messages')
+          .select('*')
+          .eq('match_id', matchId)
+          .order('created_at', { ascending: true })
+
+        if (error) {
+          console.error('Error loading chat messages:', error)
+          return
         }
+
+        const chatMessages = data.map(msg => ({
+          id: msg.id,
+          sender: msg.sender_id === session?.user?.id ? session.user.name || 'You' : 'Opponent',
+          content: msg.content,
+          timestamp: new Date(msg.created_at),
+          type: 'user' as const
+        }))
+
+        setMessages(chatMessages)
       } catch (error) {
-        console.error('Error parsing chat message:', error)
+        console.error('Error loading messages:', error)
       }
     }
 
-    ws.onclose = (event) => {
-      setIsConnected(false)
-      console.log('Disconnected from match chat:', event.code, event.reason)
-    }
+    loadMessages()
 
-    ws.onerror = (error) => {
-      console.error('Match chat WebSocket error:', error)
-      setIsConnected(false)
-    }
+    // Subscribe to new chat messages
+    chatChannel.current = supabase
+      .channel(`chat:${matchId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'match_chat_messages',
+          filter: `match_id=eq.${matchId}`
+        },
+        (payload) => {
+          const newMessage = payload.new
+          const message: Message = {
+            id: newMessage.id,
+            sender: newMessage.sender_id === session?.user?.id ? session.user.name || 'You' : 'Opponent',
+            content: newMessage.content,
+            timestamp: new Date(newMessage.created_at),
+            type: 'user'
+          }
+          setMessages(prev => [...prev, message])
+        }
+      )
+      .subscribe((status) => {
+        console.log('Chat subscription status:', status)
+        setIsConnected(status === 'SUBSCRIBED')
+      })
 
     return () => {
-      console.log('Cleaning up match chat WebSocket connection')
-      ws.close()
+      if (chatChannel.current) {
+        supabase.removeChannel(chatChannel.current)
+      }
     }
-  }, [matchId])
+  }, [matchId, session?.user?.id, session?.user?.name])
 
   useEffect(() => {
     // Auto-scroll to bottom when new messages arrive
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const sendMessage = () => {
-    if (!newMessage.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN || opponentLeft) {
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !session?.user?.id || opponentLeft) {
       return
     }
 
-    const message = {
-      type: 'chat',
-      content: newMessage,
-      sender: session?.user?.name || 'Anonymous',
-      timestamp: new Date().toISOString()
-    }
+    try {
+      const { error } = await supabase
+        .from('match_chat_messages')
+        .insert({
+          match_id: matchId,
+          sender_id: session.user.id,
+          content: newMessage.trim()
+        })
 
-    wsRef.current.send(JSON.stringify(message))
-    setNewMessage('')
+      if (error) {
+        console.error('Error sending message:', error)
+        return
+      }
+
+      setNewMessage('')
+    } catch (error) {
+      console.error('Error sending message:', error)
+    }
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -172,13 +176,13 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
           messages.map((message) => (
             <div
               key={message.id}
-              className={`flex ${message.type === 'system' ? 'justify-center' : message.sender === session?.user?.name ? 'justify-end' : 'justify-start'}`}
+              className={`flex ${message.type === 'system' ? 'justify-center' : message.sender === (session?.user?.name || 'You') ? 'justify-end' : 'justify-start'}`}
             >
               <div
                 className={`max-w-full px-2 py-1 rounded text-sm ${
                   message.type === 'system'
                     ? 'bg-gray-100 text-gray-600 text-center italic'
-                    : message.sender === session?.user?.name
+                    : message.sender === (session?.user?.name || 'You')
                     ? 'bg-blue-500 text-white'
                     : 'bg-gray-200 text-gray-800'
                 }`}
