@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     const compatibleOpponents = opponents?.filter(opponent => 
       opponent.preferences?.island === preferences.island
     ) || [];
-
+    
     if (compatibleOpponents.length > 0) {
       const opponent = compatibleOpponents[0];
       
