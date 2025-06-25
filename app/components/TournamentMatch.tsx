@@ -110,11 +110,28 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
         if (matchStatus.strikesRemaining !== undefined) setStrikesRemaining(matchStatus.strikesRemaining)
         if (matchStatus.availableStages) setAvailableStages(matchStatus.availableStages)
         // Handle character selection updates from match_state
-        if (matchStatus.player1Character) setPlayer1Character(matchStatus.player1Character)
-        if (matchStatus.player2Character) setPlayer2Character(matchStatus.player2Character)
+        if (matchStatus.player1Character) {
+          console.log('Setting player1Character:', matchStatus.player1Character)
+          setPlayer1Character(matchStatus.player1Character)
+        }
+        if (matchStatus.player2Character) {
+          console.log('Setting player2Character:', matchStatus.player2Character)
+          setPlayer2Character(matchStatus.player2Character)
+        }
+        
+        // Check if both characters are selected and we should transition
+        if (matchStatus.player1Character && matchStatus.player2Character && matchStatus.status === 'character_selection') {
+          console.log('Both characters selected but still in character_selection, checking for transition...')
+        }
       } else if (matchStatus.type === 'character_selection_update') {
-        if (matchStatus.player1Character) setPlayer1Character(matchStatus.player1Character)
-        if (matchStatus.player2Character) setPlayer2Character(matchStatus.player2Character)
+        if (matchStatus.player1Character) {
+          console.log('Character selection update - player1Character:', matchStatus.player1Character)
+          setPlayer1Character(matchStatus.player1Character)
+        }
+        if (matchStatus.player2Character) {
+          console.log('Character selection update - player2Character:', matchStatus.player2Character)
+          setPlayer2Character(matchStatus.player2Character)
+        }
       } else if (matchStatus.type === 'stage_striking_update') {
         if (matchStatus.currentPlayer !== undefined && playerIndex !== null) {
           setCurrentPlayer(matchStatus.currentPlayer)
@@ -169,6 +186,21 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
       }
     }
   }, [matchStatus, playerIndex]) // Add matchStatus to dependency array
+
+  // Monitor character selection state and force transition if needed
+  useEffect(() => {
+    const bothPicked = player1Character && player2Character
+    console.log('Character selection state check:')
+    console.log('- player1Character:', player1Character)
+    console.log('- player2Character:', player2Character)
+    console.log('- bothPicked:', bothPicked)
+    console.log('- matchStatusState:', matchStatusState)
+    
+    if (bothPicked && matchStatusState === 'character_selection') {
+      console.log('Both characters selected but still in character_selection state, forcing transition to stage_striking')
+      setMatchStatusState('stage_striking')
+    }
+  }, [player1Character, player2Character, matchStatusState])
 
   const handleCharacterSelect = (character: string) => {
     setSelectedCharacter(character)

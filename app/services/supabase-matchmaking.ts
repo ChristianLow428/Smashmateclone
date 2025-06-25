@@ -748,7 +748,10 @@ class SupabaseMatchmakingService {
         .eq('id', matchId)
         .single()
 
-      if (!match) return
+      if (!match) {
+        console.error('Match not found for character selection')
+        return
+      }
 
       const playerIndex = match.player1_id === this.currentPlayerId ? 0 : 1
       const characterSelection = match.character_selection || {}
@@ -790,7 +793,23 @@ class SupabaseMatchmakingService {
       if (error) {
         console.error('Error updating character selection:', error)
       } else {
-        console.log('Character selection updated successfully')
+        console.log('Character selection updated successfully in database')
+        
+        // Force a manual status update to ensure UI gets the update
+        if (bothReady) {
+          console.log('Forcing manual status update for stage transition')
+          // Get the updated match data
+          const { data: updatedMatch } = await supabase
+            .from('matches')
+            .select('*')
+            .eq('id', matchId)
+            .single()
+            
+          if (updatedMatch) {
+            // Manually trigger the status update
+            this.handleMatchUpdate({ new: updatedMatch })
+          }
+        }
       }
     } catch (error) {
       console.error('Error selecting character:', error)

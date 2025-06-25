@@ -105,6 +105,15 @@ export default function FreeBattle() {
     }
   }, [matchStatus, useWebSocket, opponent, playerIndex, currentMatch])
 
+  // Handle when currentMatch becomes null (match ended/left)
+  useEffect(() => {
+    if (!currentMatch) {
+      console.log('Current match is null, clearing opponent and player index')
+      setOpponent(null)
+      setPlayerIndex(null)
+    }
+  }, [currentMatch])
+
   const handleStartSearch = async () => {
     console.log('Starting search with preferences:', preferences)
     console.log('Session data:', session)
@@ -149,7 +158,7 @@ export default function FreeBattle() {
     cancelSearch()
   }
 
-  const handleLeaveMatch = () => {
+  const handleLeaveMatch = async () => {
     const confirmed = window.confirm('Are you sure you want to leave this match? This will disconnect you from your opponent.')
     if (!confirmed) {
       return
@@ -157,10 +166,14 @@ export default function FreeBattle() {
     
     if (currentMatch) {
       console.log('Leaving match:', currentMatch)
-      leaveMatch(currentMatch)
+      await leaveMatch(currentMatch)
     }
+    
+    // Clear local state immediately
     setOpponent(null)
     setPlayerIndex(null)
+    
+    console.log('Match left, state cleared')
   }
 
   const isDisabled = !session;
