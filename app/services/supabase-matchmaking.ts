@@ -185,7 +185,7 @@ class SupabaseMatchmakingService {
 
       if (!ourPlayer) return
 
-      // Find a compatible opponent - use a different approach for JSONB query
+      // Find a compatible opponent - only look for players who are actively searching
       const { data: opponents, error } = await supabase
         .from('matchmaking_players')
         .select('*')
@@ -203,9 +203,14 @@ class SupabaseMatchmakingService {
         opponent.preferences?.island === ourPlayer.preferences.island
       ) || []
 
+      console.log(`Found ${compatibleOpponents.length} compatible opponents`)
+
       if (compatibleOpponents.length > 0) {
         const opponent = compatibleOpponents[0]
+        console.log('Creating match with opponent:', opponent.id)
         await this.createMatch(ourPlayer, opponent)
+      } else {
+        console.log('No compatible opponents found, continuing to search...')
       }
     } catch (error) {
       console.error('Error trying to match players:', error)
@@ -260,12 +265,14 @@ class SupabaseMatchmakingService {
     if (!this.currentPlayerId) return
 
     try {
-      // Find matches that reference our player ID directly
+      console.log('Looking for existing match for player:', this.currentPlayerId)
+      
+      // Find matches that reference our player ID directly - only active matches
       const { data: match, error } = await supabase
         .from('matches')
         .select('*')
         .or(`player1_id.eq.${this.currentPlayerId},player2_id.eq.${this.currentPlayerId}`)
-        .eq('status', 'character_selection')
+        .in('status', ['character_selection', 'stage_striking', 'active']) // Only active matches
         .single()
 
       if (error) {
@@ -274,6 +281,7 @@ class SupabaseMatchmakingService {
       }
 
       if (match) {
+        console.log('Found existing match:', match.id, 'Status:', match.status)
         this.currentMatchId = match.id
         
         // Get opponent information
@@ -284,8 +292,15 @@ class SupabaseMatchmakingService {
           .eq('id', opponentId)
           .single()
 
+        if (!opponent) {
+          console.error('Opponent not found in matchmaking_players table')
+          return
+        }
+
         // Determine player index
         const playerIndex = match.player1_id === this.currentPlayerId ? 0 : 1
+
+        console.log('Opponent found:', opponent.id, 'Player index:', playerIndex)
 
         // Subscribe to match updates
         this.subscribeToMatch(match.id)
@@ -310,6 +325,8 @@ class SupabaseMatchmakingService {
           playerIndex: playerIndex,
           opponent: opponent // Include opponent information
         })
+      } else {
+        console.log('No active match found for player')
       }
     } catch (error) {
       console.error('Error finding match:', error)
@@ -397,6 +414,9 @@ class SupabaseMatchmakingService {
       this.isSearching = true
       console.log('Starting search with player ID:', this.currentPlayerId)
 
+      // Clean up any existing state first
+      await this.cleanupStaleData()
+
       // Check if already in queue or match
       const { data: existingPlayer } = await supabase
         .from('matchmaking_players')
@@ -458,6 +478,37 @@ class SupabaseMatchmakingService {
     }
   }
 
+  private async cleanupStaleData() {
+    try {
+      console.log('Cleaning up stale data for player:', this.currentPlayerId)
+      
+      // Clean up any existing subscriptions
+      if (this.matchChannel) {
+        this.matchChannel.unsubscribe()
+        this.matchChannel = null
+      }
+      
+      if (this.chatChannel) {
+        this.chatChannel.unsubscribe()
+        this.chatChannel = null
+      }
+      
+      // Stop any existing polling
+      if (this.pollingInterval) {
+        clearInterval(this.pollingInterval)
+        this.pollingInterval = null
+      }
+      
+      // Reset state
+      this.currentMatchId = null
+      this.isSearching = false
+      
+      console.log('Stale data cleanup completed')
+    } catch (error) {
+      console.error('Error cleaning up stale data:', error)
+    }
+  }
+
   public async cancelSearch() {
     if (!this.currentPlayerId) return
 
@@ -483,17 +534,39 @@ class SupabaseMatchmakingService {
 
   public async leaveMatch(matchId: string) {
     try {
-      // Update player status
+      console.log('Leaving match:', matchId)
+      
+      // Update player status to offline
       if (this.currentPlayerId) {
         await supabase
           .from('matchmaking_players')
           .update({ status: 'offline' })
           .eq('id', this.currentPlayerId)
+        console.log('Updated player status to offline')
       }
 
+      // Update match status to completed if it's still active
+      await supabase
+        .from('matches')
+        .update({ status: 'completed' })
+        .eq('id', matchId)
+        .in('status', ['character_selection', 'stage_striking', 'active'])
+      console.log('Updated match status to completed')
+
       // Clean up subscriptions
-      this.matchChannel?.unsubscribe()
-      this.chatChannel?.unsubscribe()
+      if (this.matchChannel) {
+        this.matchChannel.unsubscribe()
+        this.matchChannel = null
+        console.log('Unsubscribed from match channel')
+      }
+      
+      if (this.chatChannel) {
+        this.chatChannel.unsubscribe()
+        this.chatChannel = null
+        console.log('Unsubscribed from chat channel')
+      }
+      
+      // Reset state
       this.currentMatchId = null
       this.currentPlayerId = null
       this.isSearching = false
@@ -502,7 +575,10 @@ class SupabaseMatchmakingService {
       if (this.pollingInterval) {
         clearInterval(this.pollingInterval)
         this.pollingInterval = null
+        console.log('Stopped polling')
       }
+      
+      console.log('Successfully left match and cleaned up')
     } catch (error) {
       console.error('Error leaving match:', error)
     }
