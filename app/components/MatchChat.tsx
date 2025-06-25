@@ -359,7 +359,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
   return (
     <div className="bg-white rounded-lg shadow-md h-full flex flex-col">
       {/* Header */}
-      <div className={`text-white p-3 rounded-t-lg flex justify-between items-center ${opponentLeft ? 'bg-red-600' : 'bg-blue-600'}`}>
+      <div className={`text-white p-2 md:p-3 rounded-t-lg flex justify-between items-center ${opponentLeft ? 'bg-red-600' : 'bg-blue-600'}`}>
         <div>
           <h3 className="text-sm font-semibold">Match Chat</h3>
           <p className="text-xs opacity-90">
@@ -367,10 +367,10 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
             {opponentLeft && <span className="text-red-200 ml-1 font-semibold">• OPPONENT LEFT</span>}
           </p>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1 md:space-x-2">
           <button
             onClick={sendTestMessage}
-            className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+            className="px-1 md:px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
             title="Send test message"
           >
             Test
@@ -385,9 +385,9 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
       </div>
 
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
+      <div className="flex-1 overflow-y-auto p-2 md:p-3 space-y-2 min-h-0">
         {opponentLeft && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-2 md:p-3 mb-3">
             <div className="flex items-center space-x-2">
               <div className="w-3 h-3 bg-red-500 rounded-full"></div>
               <span className="text-red-800 font-semibold text-sm">Opponent has left the match</span>
@@ -407,7 +407,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
               className={`flex ${message.type === 'system' ? 'justify-center' : message.sender === (session?.user?.name || 'You') ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-full px-2 py-1 rounded text-sm ${
+                className={`max-w-[85%] px-2 py-1 rounded text-sm ${
                   message.type === 'system'
                     ? 'bg-gray-100 text-gray-600 text-center italic'
                     : message.sender === (session?.user?.name || 'You')
@@ -418,7 +418,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
                 {message.type !== 'system' && (
                   <div className="text-xs opacity-75 mb-1">{message.sender}</div>
                 )}
-                <div className="text-sm">{message.content}</div>
+                <div className="text-sm break-words">{message.content}</div>
                 {message.type !== 'system' && (
                   <div className="text-xs opacity-75 mt-1">
                     {message.timestamp.toLocaleTimeString()}
@@ -432,7 +432,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
       </div>
 
       {/* Input Area */}
-      <div className="p-3 border-t">
+      <div className="p-2 md:p-3 border-t">
         <div className="flex space-x-2">
           <input
             type="text"
@@ -446,7 +446,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
           <button
             onClick={sendMessage}
             disabled={!newMessage.trim() || opponentLeft}
-            className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-2 md:px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Send
           </button>

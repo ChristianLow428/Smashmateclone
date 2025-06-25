@@ -322,13 +322,13 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
         </div>
         
         {/* Character Grid */}
-        <div className="grid grid-cols-6 gap-2 max-h-96 overflow-y-auto mb-4">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 max-h-96 overflow-y-auto mb-4">
           {filteredCharacters.length > 0 ? (
             filteredCharacters.map((character) => (
               <button
                 key={character}
                 onClick={() => handleCharacterSelect(character)}
-                className={`p-2 text-sm border rounded ${
+                className={`p-2 text-xs sm:text-sm border rounded ${
                   selectedCharacter === character
                     ? 'bg-blue-500 text-white border-blue-500'
                     : 'bg-gray-50 hover:bg-gray-100 border-gray-300'
@@ -338,7 +338,7 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
               </button>
             ))
           ) : (
-            <div className="col-span-6 text-center py-8 text-gray-500">
+            <div className="col-span-3 sm:col-span-4 md:col-span-6 text-center py-8 text-gray-500">
               No characters found matching "{characterSearchTerm}"
             </div>
           )}
@@ -446,7 +446,7 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
             {turnDescription}
           </p>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div>
             <h3 className="font-semibold mb-2">Available Stages</h3>
             <div className="space-y-2">
@@ -469,7 +469,7 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
                     }`}
                   >
                     <div className="flex justify-between items-center">
-                      <span>{stage}</span>
+                      <span className="text-sm">{stage}</span>
                       <div className="flex items-center space-x-2">
                         {isPickingPhase && isMyTurn && !isPickingStage && (
                           <span className="text-xs px-2 py-1 rounded bg-green-100 text-green-800">
@@ -503,7 +503,7 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
                 return (
                   <div key={stage} className="p-2 bg-gray-100 border rounded text-gray-500">
                     <div className="flex justify-between items-center">
-                      <span>{stage}</span>
+                      <span className="text-sm">{stage}</span>
                     </div>
                   </div>
                 )
@@ -683,10 +683,10 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
   )
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-gray-100 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
+      <div className="bg-gray-100 rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] overflow-y-auto p-4 md:p-6">
         {/* Header */}
-        <div className="bg-blue-600 text-white p-4 rounded-t-lg flex justify-between items-center mb-4">
+        <div className="bg-blue-600 text-white p-3 md:p-4 rounded-t-lg flex flex-col md:flex-row md:justify-between md:items-center mb-4 space-y-2 md:space-y-0">
           <div>
             <h2 className="text-lg font-semibold">Tournament Match</h2>
             <p className="text-sm opacity-90">
@@ -698,28 +698,28 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
               </p>
             )}
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 md:space-x-4">
             <button
               onClick={() => {
                 if (!opponentLeft && matchStatusState !== 'completed') setShowChat(!showChat)
               }}
-              className={`px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 ${opponentLeft || matchStatusState === 'completed' ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`px-2 py-1 md:px-3 md:py-1 bg-blue-500 text-white rounded text-xs md:text-sm hover:bg-blue-600 ${opponentLeft || matchStatusState === 'completed' ? 'opacity-50 cursor-not-allowed' : ''}`}
               disabled={opponentLeft || matchStatusState === 'completed'}
             >
               {showChat ? 'Hide Chat' : 'Show Chat'}
             </button>
             <button
               onClick={onLeaveMatch}
-              className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
+              className="px-2 py-1 md:px-3 md:py-1 bg-red-500 text-white rounded text-xs md:text-sm hover:bg-red-600"
             >
               Leave Match
             </button>
           </div>
         </div>
 
-        <div className="flex gap-4">
+        <div className="flex flex-col lg:flex-row gap-4">
           {/* Main Content */}
-          <div className="flex-1">
+          <div className="flex-1 order-2 lg:order-1">
             {matchStatusState === 'character_selection' && renderCharacterSelection()}
             {matchStatusState === 'stage_striking' && renderStageStriking()}
             {matchStatusState === 'active' && renderGameActive()}
@@ -729,7 +729,7 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
 
           {/* Chat Sidebar */}
           {showChat && (
-            <div className="w-80">
+            <div className="w-full lg:w-80 order-1 lg:order-2">
               <MatchChat
                 matchId={matchId}
                 opponent={opponent}
