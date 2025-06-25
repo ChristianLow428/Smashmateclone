@@ -83,6 +83,7 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
   const [showChat, setShowChat] = useState(true)
   const [isBanningStage, setIsBanningStage] = useState<boolean>(false)
   const [isPickingStage, setIsPickingStage] = useState<boolean>(false)
+  const [isReportingResult, setIsReportingResult] = useState<boolean>(false)
   
   // Game result validation state
   const [gameResultPending, setGameResultPending] = useState<boolean>(false)
@@ -237,7 +238,11 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
   }
 
   const handleGameResult = (winner: number) => {
-    reportGameResult(matchId, winner)
+    if (isReportingResult) return
+    setIsReportingResult(true)
+    reportGameResult(matchId, winner).finally(() => {
+      setIsReportingResult(false)
+    })
   }
 
   const renderCharacterSelection = () => {
@@ -530,23 +535,43 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
       <div className="grid grid-cols-2 gap-4">
         <button
           onClick={() => handleGameResult(0)}
-          className={`p-3 rounded hover:opacity-80 transition-opacity ${
-            playerIndex === 0 
-              ? 'bg-blue-500 text-white' 
-              : 'bg-gray-300 text-gray-700'
+          disabled={isReportingResult}
+          className={`p-3 rounded transition-all ${
+            isReportingResult
+              ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+              : playerIndex === 0 
+                ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
           }`}
         >
-          {playerIndex === 0 ? 'You Win' : 'Player 1 Wins'}
+          {isReportingResult ? (
+            <div className="flex items-center justify-center space-x-2">
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <span>Reporting...</span>
+            </div>
+          ) : (
+            <span>{playerIndex === 0 ? 'You Win' : 'Player 1 Wins'}</span>
+          )}
         </button>
         <button
           onClick={() => handleGameResult(1)}
-          className={`p-3 rounded hover:opacity-80 transition-opacity ${
-            playerIndex === 1 
-              ? 'bg-red-500 text-white' 
-              : 'bg-gray-300 text-gray-700'
+          disabled={isReportingResult}
+          className={`p-3 rounded transition-all ${
+            isReportingResult
+              ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+              : playerIndex === 1 
+                ? 'bg-red-500 text-white hover:bg-red-600' 
+                : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
           }`}
         >
-          {playerIndex === 1 ? 'You Win' : 'Player 2 Wins'}
+          {isReportingResult ? (
+            <div className="flex items-center justify-center space-x-2">
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <span>Reporting...</span>
+            </div>
+          ) : (
+            <span>{playerIndex === 1 ? 'You Win' : 'Player 2 Wins'}</span>
+          )}
         </button>
       </div>
     </div>
