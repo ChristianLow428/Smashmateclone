@@ -866,12 +866,12 @@ class SupabaseMatchmakingService {
           }
         } else {
           // Counterpicks: Winner bans 2 stages, then loser picks
-          const winner = match.player1_score > match.player2_score ? 0 : 1
-          const loser = winner === 0 ? 1 : 0
+          const lastGameWinner = match.player1_score > match.player2_score ? 0 : 1
+          const lastGameLoser = lastGameWinner === 0 ? 1 : 0
           
-          if (newCurrentPlayer === winner) {
+          if (newCurrentPlayer === lastGameWinner) {
             // Winner finished banning 2 stages, now loser picks
-            newCurrentPlayer = loser
+            newCurrentPlayer = lastGameLoser
             newStrikesRemaining = 0 // No more strikes, just pick
           }
         }
@@ -963,10 +963,23 @@ class SupabaseMatchmakingService {
       if (gameResultValidation.player1Reported !== null && 
           gameResultValidation.player2Reported !== null) {
         
+        console.log('Both players reported results:', {
+          player1Reported: gameResultValidation.player1Reported,
+          player2Reported: gameResultValidation.player2Reported,
+          matchId,
+          currentScores: { player1: match.player1_score, player2: match.player2_score }
+        })
+        
         if (gameResultValidation.player1Reported === gameResultValidation.player2Reported) {
           // Both players agreed, update scores
           const newPlayer1Score = match.player1_score + (winner === 0 ? 1 : 0)
           const newPlayer2Score = match.player2_score + (winner === 1 ? 1 : 0)
+          
+          console.log('Players agreed on result, updating scores:', {
+            oldScores: { player1: match.player1_score, player2: match.player2_score },
+            newScores: { player1: newPlayer1Score, player2: newPlayer2Score },
+            winner
+          })
           
           // Check if match is complete
           const isComplete = newPlayer1Score >= 2 || newPlayer2Score >= 2
@@ -992,6 +1005,13 @@ class SupabaseMatchmakingService {
             return
           }
 
+          console.log('Successfully updated match in database:', {
+            matchId,
+            newStatus,
+            newCurrentGame,
+            newScores: { player1: newPlayer1Score, player2: newPlayer2Score }
+          })
+
           if (updatedMatch) {
             // If transitioning to next game, initialize stage striking
             if (!isComplete) {
@@ -1009,9 +1029,10 @@ class SupabaseMatchmakingService {
                 firstPlayer = 0
                 strikesRemaining = 1
               } else {
-                // Counterpicks: Winner bans 2 stages, loser picks
-                const winner = newPlayer1Score > newPlayer2Score ? 0 : 1
-                firstPlayer = winner
+                // Counterpicks: Winner of the last game bans 2 stages, loser picks
+                // Use the old scores to determine who won the last game
+                const lastGameWinner = match.player1_score > match.player2_score ? 0 : 1
+                firstPlayer = lastGameWinner
                 strikesRemaining = 2
               }
               
