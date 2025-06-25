@@ -467,9 +467,15 @@ class SupabaseMatchmakingService {
   private subscribeToMatch(matchId: string) {
     console.log('Setting up match subscription for:', matchId)
     
+    // Create unique channel names to avoid conflicts
+    const matchChannelName = `match-${matchId}-${Date.now()}`
+    const chatChannelName = `chat-${matchId}-${Date.now()}`
+    
+    console.log('Using channel names:', { matchChannelName, chatChannelName })
+    
     // Subscribe to match updates
     this.matchChannel = supabase
-      .channel(`match:${matchId}`)
+      .channel(matchChannelName)
       .on(
         'postgres_changes',
         {
@@ -500,7 +506,7 @@ class SupabaseMatchmakingService {
 
     // Subscribe to chat messages
     this.chatChannel = supabase
-      .channel(`chat:${matchId}`)
+      .channel(chatChannelName)
       .on(
         'postgres_changes',
         {

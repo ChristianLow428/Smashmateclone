@@ -67,7 +67,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
         setMessages(chatMessages)
       } catch (error) {
         console.error('Error loading messages:', error)
-    }
+      }
     }
 
     loadMessages()
@@ -76,10 +76,17 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
     const setupChatSubscription = async () => {
       try {
         console.log('Setting up chat subscription for match:', matchId)
+        console.log('Supabase client config:', {
+          hasRealtime: !!supabase.realtime
+        })
+        
+        // Create a unique channel name to avoid conflicts
+        const channelName = `chat-${matchId}-${Date.now()}`
+        console.log('Using channel name:', channelName)
         
         // Use the same channel format as the Supabase matchmaking service
         chatChannel.current = supabase
-          .channel(`chat:${matchId}`)
+          .channel(channelName)
           .on(
             'postgres_changes',
             {
@@ -98,25 +105,30 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
                   : 'Opponent',
                 content: newMessage.content,
                 timestamp: new Date(newMessage.created_at),
-            type: 'user'
+                type: 'user'
               }
               setMessages(prev => [...prev, message])
             }
           )
           .subscribe((status) => {
             console.log('Chat subscription status:', status)
+            console.log('Channel:', chatChannel.current?.topic)
             setIsConnected(status === 'SUBSCRIBED')
             
-            if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-              console.error('Chat subscription failed, retrying...')
+            if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+              console.error('Chat subscription failed with status:', status)
+              console.log('Retrying in 3 seconds...')
               setTimeout(() => {
                 if (chatChannel.current) {
+                  console.log('Removing failed channel:', chatChannel.current.topic)
                   supabase.removeChannel(chatChannel.current)
+                  chatChannel.current = null
                   setupChatSubscription()
                 }
-              }, 1000)
+              }, 3000)
             } else if (status === 'SUBSCRIBED') {
               console.log('Chat subscription successful')
+              console.log('Channel topic:', chatChannel.current?.topic)
               // Send a test message to verify connection
               setTimeout(() => {
                 sendTestMessage()
@@ -132,15 +144,16 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
             console.log('Chat connection test failed, retrying...')
             if (chatChannel.current) {
               supabase.removeChannel(chatChannel.current)
+              chatChannel.current = null
               setupChatSubscription()
-        }
+            }
           }
-        }, 2000)
+        }, 4000)
 
       } catch (error) {
         console.error('Error setting up chat subscription:', error)
-      setIsConnected(false)
-    }
+        setIsConnected(false)
+      }
     }
 
     setupChatSubscription()
@@ -148,7 +161,9 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
     return () => {
       console.log('Cleaning up chat subscription')
       if (chatChannel.current) {
+        console.log('Removing channel on cleanup:', chatChannel.current.topic)
         supabase.removeChannel(chatChannel.current)
+        chatChannel.current = null
       }
     }
   }, [matchId, session?.user?.email, session?.user?.name])

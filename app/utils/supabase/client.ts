@@ -26,6 +26,11 @@ const getSupabaseClient = (): SupabaseClient => {
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: true
+      },
+      realtime: {
+        params: {
+          eventsPerSecond: 10
+        }
       }
     })
 
