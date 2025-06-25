@@ -381,6 +381,7 @@ class SupabaseMatchmakingService {
         currentPlayer: match.stage_striking?.currentPlayer,
         strikesRemaining: match.stage_striking?.strikesRemaining,
         availableStages: match.stage_striking?.availableStages,
+        bannedStages: match.stage_striking?.bannedStages,
         player1Character: match.character_selection?.player1Character,
         player2Character: match.character_selection?.player2Character,
         playerIndex: playerIndex,
@@ -453,6 +454,7 @@ class SupabaseMatchmakingService {
           currentPlayer: match.stage_striking?.currentPlayer,
           strikesRemaining: match.stage_striking?.strikesRemaining,
           availableStages: match.stage_striking?.availableStages,
+          bannedStages: match.stage_striking?.bannedStages,
           player1Character: match.character_selection?.player1Character,
           player2Character: match.character_selection?.player2Character,
           playerIndex: playerIndex,
@@ -566,6 +568,7 @@ class SupabaseMatchmakingService {
       currentPlayer: match.stage_striking?.currentPlayer,
       strikesRemaining: match.stage_striking?.strikesRemaining,
       availableStages: match.stage_striking?.availableStages,
+      bannedStages: match.stage_striking?.bannedStages,
       player1Character: match.character_selection?.player1Character,
       player2Character: match.character_selection?.player2Character,
       playerIndex: playerIndex, // Add player index to the status update
@@ -790,7 +793,7 @@ class SupabaseMatchmakingService {
         updateData.stage_striking = {
           currentPlayer: 0, // Player 1 goes first
           strikesRemaining: 1, // Player 1 bans 1 stage first
-          availableStages: ['Battlefield', 'Final Destination', 'Smashville', 'Pokemon Stadium 2', 'Town & City'],
+          availableStages: ['Battlefield', 'Final Destination', 'Small Battlefield', 'Pokemon Stadium 2', 'Hallow Bastion'],
           bannedStages: []
         }
         console.log('Both characters selected, transitioning to stage_striking with initialized data')
@@ -855,8 +858,9 @@ class SupabaseMatchmakingService {
           newCurrentPlayer = 1
           newStrikesRemaining = 2 // Player 2 bans 2 stages
         } else {
-          // Stage striking complete, switch to picking phase
-          newStrikesRemaining = 0
+          // Player 2 finished banning, now Player 1 picks
+          newCurrentPlayer = 0
+          newStrikesRemaining = 0 // No more strikes, just pick
         }
       }
 
@@ -979,8 +983,8 @@ class SupabaseMatchmakingService {
             // If transitioning to next game, initialize stage striking
             if (!isComplete) {
               // Determine stage pool and striking rules for next game
-              const STARTER_STAGES = ['Battlefield', 'Final Destination', 'Smashville', 'Pokemon Stadium 2', 'Town & City']
-              const COUNTERPICK_STAGES = ['Kalos Pokemon League', 'Lylat Cruise', 'Unova Pokemon League', 'Yoshi\'s Story']
+              const STARTER_STAGES = ['Battlefield', 'Final Destination', 'Small Battlefield', 'Pokemon Stadium 2', 'Hallow Bastion']
+              const COUNTERPICK_STAGES = ['Smashville', 'Town & City']
               const ALL_STAGES = [...STARTER_STAGES, ...COUNTERPICK_STAGES]
               
               const stagePool = newCurrentGame === 1 ? STARTER_STAGES : ALL_STAGES

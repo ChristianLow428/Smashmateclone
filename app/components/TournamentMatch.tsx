@@ -34,16 +34,14 @@ type MatchStatus = 'character_selection' | 'stage_striking' | 'active' | 'comple
 const STARTER_STAGES = [
   'Battlefield',
   'Final Destination', 
-  'Smashville',
+  'Small Battlefield',
   'Pokemon Stadium 2',
-  'Town & City'
+  'Hallow Bastion'
 ]
 
 const COUNTERPICK_STAGES = [
-  'Kalos Pokemon League',
-  'Lylat Cruise',
-  'Unova Pokemon League',
-  'Yoshi\'s Story'
+  'Smashville',
+  'Town & City'
 ]
 
 const ALL_STAGES = [...STARTER_STAGES, ...COUNTERPICK_STAGES]
@@ -113,6 +111,7 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
         }
         if (matchStatus.strikesRemaining !== undefined) setStrikesRemaining(matchStatus.strikesRemaining)
         if (matchStatus.availableStages) setAvailableStages(matchStatus.availableStages)
+        if (matchStatus.bannedStages) setBannedStages(matchStatus.bannedStages)
         // Handle character selection updates from match_state
         if (matchStatus.player1Character) {
           console.log('Setting player1Character:', matchStatus.player1Character)
@@ -349,7 +348,7 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
         turnDescription = 'Opponent is banning 2 stages'
       } else if (currentPlayer === 0 && strikesRemaining === 0) {
         turnDescription = 'Your turn to pick from remaining stages'
-      } else {
+      } else if (currentPlayer === 1 && strikesRemaining === 0) {
         turnDescription = 'Opponent is picking from remaining stages'
       }
     } else {
