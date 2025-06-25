@@ -34,14 +34,16 @@ type MatchStatus = 'character_selection' | 'stage_striking' | 'active' | 'comple
 const STARTER_STAGES = [
   'Battlefield',
   'Final Destination', 
-  'Hollow Bastion',
+  'Smashville',
   'Pokemon Stadium 2',
-  'Small Battlefield'
+  'Town & City'
 ]
 
 const COUNTERPICK_STAGES = [
-  'Smashville',
-  'Town and City'
+  'Kalos Pokemon League',
+  'Lylat Cruise',
+  'Unova Pokemon League',
+  'Yoshi\'s Story'
 ]
 
 const ALL_STAGES = [...STARTER_STAGES, ...COUNTERPICK_STAGES]
@@ -81,6 +83,8 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
   const [player2Score, setPlayer2Score] = useState<number>(0)
   const [isMyTurn, setIsMyTurn] = useState<boolean>(false)
   const [showChat, setShowChat] = useState(true)
+  const [isBanningStage, setIsBanningStage] = useState<boolean>(false)
+  const [isPickingStage, setIsPickingStage] = useState<boolean>(false)
   
   // Game result validation state
   const [gameResultPending, setGameResultPending] = useState<boolean>(false)
@@ -214,17 +218,23 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
   }
 
   const handleStageBan = (stage: string) => {
-    if (!isMyTurn) {
-      console.log(`Not my turn to ban. isMyTurn=${isMyTurn}, currentPlayer=${currentPlayer}, playerIndex=${playerIndex}`)
+    if (!isMyTurn || isBanningStage) {
+      console.log(`Not my turn to ban or already banning. isMyTurn=${isMyTurn}, isBanningStage=${isBanningStage}, currentPlayer=${currentPlayer}, playerIndex=${playerIndex}`)
       return
     }
     console.log(`Banning stage: ${stage}. Current state: strikesRemaining=${strikesRemaining}, currentPlayer=${currentPlayer}, playerIndex=${playerIndex}`)
-    banStage(matchId, stage)
+    setIsBanningStage(true)
+    banStage(matchId, stage).finally(() => {
+      setIsBanningStage(false)
+    })
   }
 
   const handleStagePick = (stage: string) => {
-    if (!isMyTurn) return
-    pickStage(matchId, stage)
+    if (!isMyTurn || isPickingStage) return
+    setIsPickingStage(true)
+    pickStage(matchId, stage).finally(() => {
+      setIsPickingStage(false)
+    })
   }
 
   const handleGameResult = (winner: number) => {
@@ -411,9 +421,9 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
                   <button
                     key={stage}
                     onClick={() => isPickingPhase ? handleStagePick(stage) : handleStageBan(stage)}
-                    disabled={!isMyTurn}
+                    disabled={!isMyTurn || isBanningStage || isPickingStage}
                     className={`w-full p-2 text-left border rounded ${
-                      isMyTurn
+                      isMyTurn && !isBanningStage && !isPickingStage
                         ? isPickingPhase 
                           ? 'bg-green-50 hover:bg-green-100 border-green-300'
                           : 'bg-red-50 hover:bg-red-100 border-red-300'
@@ -423,14 +433,19 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
                     <div className="flex justify-between items-center">
                       <span>{stage}</span>
                       <div className="flex items-center space-x-2">
-                        <span className={`text-xs px-2 py-1 rounded ${
-                          isStarter ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                        }`}>
-                          {isStarter ? 'Starter' : 'Counterpick'}
-                        </span>
-                        {isPickingPhase && isMyTurn && (
+                        {isPickingPhase && isMyTurn && !isPickingStage && (
                           <span className="text-xs px-2 py-1 rounded bg-green-100 text-green-800">
                             Pick
+                          </span>
+                        )}
+                        {!isPickingPhase && isMyTurn && !isBanningStage && (
+                          <span className="text-xs px-2 py-1 rounded bg-red-100 text-red-800">
+                            Ban
+                          </span>
+                        )}
+                        {(isBanningStage || isPickingStage) && (
+                          <span className="text-xs px-2 py-1 rounded bg-yellow-100 text-yellow-800">
+                            Processing...
                           </span>
                         )}
                       </div>
@@ -451,11 +466,6 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
                   <div key={stage} className="p-2 bg-gray-100 border rounded text-gray-500">
                     <div className="flex justify-between items-center">
                       <span>{stage}</span>
-                      <span className={`text-xs px-2 py-1 rounded ${
-                        isStarter ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                      }`}>
-                        {isStarter ? 'Starter' : 'Counterpick'}
-                      </span>
                     </div>
                   </div>
                 )
