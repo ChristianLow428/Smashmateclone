@@ -67,9 +67,9 @@ class SupabaseMatchmakingService {
 
   private async initializeRealtime() {
     try {
-      console.log('Initializing Supabase real-time subscriptions...')
+      console.log('Initializing real-time subscriptions')
       
-      // Subscribe to matchmaking_players table for finding opponents
+      // Subscribe to matchmaking_players table changes
       const playersChannel = supabase
         .channel('matchmaking_players')
         .on(
@@ -80,7 +80,6 @@ class SupabaseMatchmakingService {
             table: 'matchmaking_players'
           },
           (payload) => {
-            console.log('Player joined:', payload.new)
             this.handlePlayerJoined(payload.new)
           }
         )
@@ -92,32 +91,42 @@ class SupabaseMatchmakingService {
             table: 'matchmaking_players'
           },
           (payload) => {
-            console.log('Player updated:', payload.new)
             this.handlePlayerUpdated(payload.new)
           }
         )
-        .subscribe((status) => {
-          console.log('Supabase Realtime subscription status:', status)
-          if (status === 'SUBSCRIBED') {
-            console.log('Realtime subscription successful')
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            console.log('Realtime subscription failed, falling back to polling')
-            this.startPolling()
-          }
-        })
+        .subscribe()
 
-      // Set a timeout to check if subscription is working
-      setTimeout(() => {
-        if (!this.pollingInterval) {
-          console.log('Realtime subscription timeout, starting polling fallback')
-          this.startPolling()
-        }
-      }, 3000) // Reduced timeout to 3 seconds
-      
+      // Subscribe to matches table changes
+      const matchesChannel = supabase
+        .channel('matches')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'matches'
+          },
+          (payload) => {
+            this.handleMatchCreated(payload.new)
+          }
+        )
+        .subscribe()
+
+      console.log('Real-time subscriptions initialized')
     } catch (error) {
-      console.error('Error initializing realtime:', error)
-      console.log('Falling back to polling mechanism')
-      this.startPolling()
+      console.error('Error initializing real-time:', error)
+    }
+  }
+
+  private async handleMatchCreated(match: any) {
+    // Check if this match involves our player
+    if (this.currentPlayerId && (match.player1_id === this.currentPlayerId || match.player2_id === this.currentPlayerId)) {
+      console.log('New match created involving our player:', match.id)
+      
+      // Small delay to ensure the match is fully created
+      setTimeout(async () => {
+        await this.findOurMatch()
+      }, 100)
     }
   }
 
@@ -126,12 +135,10 @@ class SupabaseMatchmakingService {
       clearInterval(this.pollingInterval)
     }
     
-    console.log('Starting polling fallback for matchmaking')
-    this.pollingInterval = setInterval(async () => {
-      if (this.isSearching && this.currentPlayerId) {
-        await this.pollForMatches()
-      }
-    }, 2000) // Poll every 2 seconds
+    console.log('Starting polling fallback mechanism')
+    this.pollingInterval = setInterval(() => {
+      this.pollForMatches()
+    }, 1000) // Poll every second for faster response
   }
 
   private async pollForMatches() {
@@ -150,6 +157,22 @@ class SupabaseMatchmakingService {
         console.log('Player status changed to in_match, finding our match')
         await this.findOurMatch()
         return
+      }
+
+      // Also check if we have an active match in the matches table
+      if (ourPlayer && ourPlayer.status === 'searching') {
+        const { data: existingMatch } = await supabase
+          .from('matches')
+          .select('*')
+          .or(`player1_id.eq.${this.currentPlayerId},player2_id.eq.${this.currentPlayerId}`)
+          .in('status', ['character_selection', 'stage_striking', 'active'])
+          .single()
+
+        if (existingMatch) {
+          console.log('Found existing match while polling:', existingMatch.id)
+          await this.findOurMatch()
+          return
+        }
       }
 
       // Only try to match if we're still searching
@@ -512,75 +535,50 @@ class SupabaseMatchmakingService {
 
   public async startSearch(preferences: MatchmakingPreferences, userId: string) {
     try {
-      if (!userId) {
-        throw new Error('User ID is required')
-      }
-
+      console.log('Starting search with preferences:', preferences)
       this.currentPlayerId = userId
       this.isSearching = true
-      console.log('Starting search with player ID:', this.currentPlayerId)
 
-      // Clean up any existing state first
+      // Clean up any stale data first
       await this.cleanupStaleData()
 
-      // Check if already in queue or match
-      const { data: existingPlayer } = await supabase
-        .from('matchmaking_players')
-        .select('*')
-        .eq('id', this.currentPlayerId)
-        .single()
-
-      if (existingPlayer) {
-        if (existingPlayer.status === 'searching') {
-          console.log('Already searching for match')
-          return
-        } else if (existingPlayer.status === 'in_match') {
-          console.log('Already in a match, trying to find existing match')
-          // Try to find the existing match instead of throwing an error
-          await this.findOurMatch()
-          return
-        }
-      }
-
       // Insert or update player in matchmaking queue
-      console.log('Attempting to insert/update player:', {
-        id: this.currentPlayerId,
-        status: 'searching',
-        preferences: preferences
-      })
-      
-      const { data: insertData, error: insertError } = await supabase
+      const { data, error } = await supabase
         .from('matchmaking_players')
         .upsert({
-          id: this.currentPlayerId,
+          id: userId,
           status: 'searching',
-          preferences: preferences,
-          created_at: new Date().toISOString()
+          preferences: preferences
         })
         .select()
 
-      console.log('Insert result:', { data: insertData, error: insertError })
-
-      if (insertError) {
-        console.error('Error inserting player:', insertError)
-        const errorMessage = insertError.message || insertError.details || insertError.hint || 'Unknown database error'
-        throw new Error(`Failed to join queue: ${errorMessage}`)
+      if (error) {
+        console.error('Error joining matchmaking queue:', error)
+        this.onErrorCallback?.('Failed to join matchmaking queue')
+        return
       }
 
       console.log('Successfully joined matchmaking queue')
-      
-      // Try to find an immediate match
-      await this.tryMatchPlayers()
-      
-      // Start polling if realtime failed
-      if (!this.pollingInterval) {
-        this.startPolling()
-      }
+
+      // Initialize real-time subscriptions
+      await this.initializeRealtime()
+
+      // Start polling as a fallback mechanism
+      this.startPolling()
+
+      // Set a timeout to ensure polling is working even if real-time fails
+      setTimeout(() => {
+        if (this.isSearching && !this.currentMatchId) {
+          console.log('Ensuring polling is active for matchmaking')
+          if (!this.pollingInterval) {
+            this.startPolling()
+          }
+        }
+      }, 2000)
+
     } catch (error) {
       console.error('Error starting search:', error)
-      this.isSearching = false
-      this.currentPlayerId = null
-      throw error
+      this.onErrorCallback?.('Failed to start search')
     }
   }
 
