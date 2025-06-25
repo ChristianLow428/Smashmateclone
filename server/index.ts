@@ -315,11 +315,11 @@ class MatchmakingServer {
     if (otherPlayer) {
       console.log(`Notifying other player ${otherPlayer.id} about disconnect`)
       try {
-        this.sendMessage(otherPlayer.ws, {
-          type: 'match',
-          matchId: match.id,
-          status: 'disconnected'
-        })
+      this.sendMessage(otherPlayer.ws, {
+        type: 'match',
+        matchId: match.id,
+        status: 'disconnected'
+      })
         console.log(`Successfully sent disconnect notification to player ${otherPlayer.id}`)
       } catch (error) {
         console.error(`Failed to send disconnect notification to player ${otherPlayer.id}:`, error)
