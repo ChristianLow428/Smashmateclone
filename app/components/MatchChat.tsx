@@ -67,7 +67,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
         setMessages(chatMessages)
       } catch (error) {
         console.error('Error loading messages:', error)
-      }
+    }
     }
 
     loadMessages()
@@ -77,6 +77,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
       try {
         console.log('Setting up chat subscription for match:', matchId)
         
+        // Use the same channel format as the Supabase matchmaking service
         chatChannel.current = supabase
           .channel(`chat:${matchId}`)
           .on(
@@ -97,7 +98,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
                   : 'Opponent',
                 content: newMessage.content,
                 timestamp: new Date(newMessage.created_at),
-                type: 'user'
+            type: 'user'
               }
               setMessages(prev => [...prev, message])
             }
@@ -114,6 +115,12 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
                   setupChatSubscription()
                 }
               }, 1000)
+            } else if (status === 'SUBSCRIBED') {
+              console.log('Chat subscription successful')
+              // Send a test message to verify connection
+              setTimeout(() => {
+                sendTestMessage()
+              }, 1000)
             }
           })
 
@@ -126,14 +133,14 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
             if (chatChannel.current) {
               supabase.removeChannel(chatChannel.current)
               setupChatSubscription()
-            }
+        }
           }
         }, 2000)
 
       } catch (error) {
         console.error('Error setting up chat subscription:', error)
-        setIsConnected(false)
-      }
+      setIsConnected(false)
+    }
     }
 
     setupChatSubscription()
@@ -190,6 +197,28 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
     }
   }
 
+  const sendTestMessage = async () => {
+    if (!session?.user?.email) return
+    
+    try {
+      const { error } = await supabase
+        .from('match_chat_messages')
+        .insert({
+          match_id: matchId,
+          sender_id: session.user.email,
+          content: 'Test message - chat connection working!'
+        })
+
+      if (error) {
+        console.error('Error sending test message:', error)
+      } else {
+        console.log('Test message sent successfully')
+      }
+    } catch (error) {
+      console.error('Error sending test message:', error)
+    }
+  }
+
   return (
     <div className="bg-white rounded-lg shadow-md h-full flex flex-col">
       {/* Header */}
@@ -201,9 +230,18 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
             {opponentLeft && <span className="text-red-300 ml-1">• Left</span>}
           </p>
         </div>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={sendTestMessage}
+            className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+            title="Send test message"
+          >
+            Test
+          </button>
         <div className="flex items-center space-x-1">
           <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
           <span className="text-xs">{isConnected ? 'Connected' : 'Disconnected'}</span>
+          </div>
         </div>
       </div>
 

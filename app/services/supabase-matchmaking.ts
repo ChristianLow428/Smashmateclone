@@ -493,6 +493,8 @@ class SupabaseMatchmakingService {
               this.subscribeToMatch(matchId)
             }
           }, 1000)
+        } else if (status === 'SUBSCRIBED') {
+          console.log('Match subscription successful')
         }
       })
 
@@ -514,6 +516,9 @@ class SupabaseMatchmakingService {
       )
       .subscribe((status) => {
         console.log('Chat subscription status:', status)
+        if (status === 'SUBSCRIBED') {
+          console.log('Chat subscription successful')
+        }
       })
   }
 
@@ -521,11 +526,29 @@ class SupabaseMatchmakingService {
     const match = payload.new
     if (!match) return
 
+    console.log('Match update received:', {
+      id: match.id,
+      status: match.status,
+      character_selection: match.character_selection,
+      stage_striking: match.stage_striking,
+      current_game: match.current_game,
+      player1_score: match.player1_score,
+      player2_score: match.player2_score
+    })
+
     // Determine player index directly from the match
     const playerIndex = match.player1_id === this.currentPlayerId ? 0 : 1
 
+    // Get opponent information
+    const opponentId = match.player1_id === this.currentPlayerId ? match.player2_id : match.player1_id
+    const { data: opponent } = await supabase
+      .from('matchmaking_players')
+      .select('*')
+      .eq('id', opponentId)
+      .single()
+
     // Send match status update
-    this.onMatchStatusCallback?.({
+    const statusUpdate = {
       type: 'match_state',
       matchId: match.id,
       status: match.status,
@@ -538,8 +561,12 @@ class SupabaseMatchmakingService {
       availableStages: match.stage_striking?.availableStages,
       player1Character: match.character_selection?.player1Character,
       player2Character: match.character_selection?.player2Character,
-      playerIndex: playerIndex // Add player index to the status update
-    })
+      playerIndex: playerIndex, // Add player index to the status update
+      opponent: opponent // Include opponent information
+    }
+
+    console.log('Sending status update to UI:', statusUpdate)
+    this.onMatchStatusCallback?.(statusUpdate)
   }
 
   private handleChatMessage(message: any) {
@@ -745,7 +772,14 @@ class SupabaseMatchmakingService {
       // If both players are ready, transition to stage_striking
       if (bothReady) {
         updateData.status = 'stage_striking'
-        console.log('Both characters selected, transitioning to stage_striking')
+        // Initialize stage striking data for Game 1
+        updateData.stage_striking = {
+          currentPlayer: 0, // Player 1 goes first
+          strikesRemaining: 1, // Player 1 bans 1 stage first
+          availableStages: ['Battlefield', 'Final Destination', 'Hollow Bastion', 'Pokemon Stadium 2', 'Small Battlefield'],
+          bannedStages: []
+        }
+        console.log('Both characters selected, transitioning to stage_striking with initialized data')
       }
 
       const { error } = await supabase

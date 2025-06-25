@@ -96,6 +96,7 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
       if (matchStatus.type === 'match_state') {
         if (matchStatus.status && ['character_selection', 'stage_striking', 'active', 'completed'].includes(matchStatus.status)) {
           setMatchStatusState(matchStatus.status as MatchStatus)
+          console.log(`Match status changed to: ${matchStatus.status}`)
         }
         if (matchStatus.selectedStage) setSelectedStage(matchStatus.selectedStage)
         if (matchStatus.currentGame) setCurrentGame(matchStatus.currentGame)
@@ -108,6 +109,9 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
         }
         if (matchStatus.strikesRemaining !== undefined) setStrikesRemaining(matchStatus.strikesRemaining)
         if (matchStatus.availableStages) setAvailableStages(matchStatus.availableStages)
+        // Handle character selection updates from match_state
+        if (matchStatus.player1Character) setPlayer1Character(matchStatus.player1Character)
+        if (matchStatus.player2Character) setPlayer2Character(matchStatus.player2Character)
       } else if (matchStatus.type === 'character_selection_update') {
         if (matchStatus.player1Character) setPlayer1Character(matchStatus.player1Character)
         if (matchStatus.player2Character) setPlayer2Character(matchStatus.player2Character)
@@ -206,9 +210,15 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
       character.toLowerCase().includes(characterSearchTerm.toLowerCase())
     )
     
-    console.log('Character search term:', characterSearchTerm)
-    console.log('Filtered characters count:', filteredCharacters.length)
-    console.log('PlayerIndex:', playerIndex, 'myChar:', myChar, 'oppChar:', oppChar)
+    console.log('Character selection render:')
+    console.log('- PlayerIndex:', playerIndex)
+    console.log('- player1Character:', player1Character)
+    console.log('- player2Character:', player2Character)
+    console.log('- bothPicked:', bothPicked)
+    console.log('- myChar:', myChar)
+    console.log('- oppChar:', oppChar)
+    console.log('- confirmedCharacter:', confirmedCharacter)
+    console.log('- matchStatusState:', matchStatusState)
     
     return (
       <div className="bg-white rounded-lg shadow-md p-6 mb-4">
@@ -275,6 +285,9 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
           )}
           {playerIndex === null && (
             <p className="text-yellow-600">Waiting for player assignment...</p>
+          )}
+          {bothPicked && matchStatusState === 'character_selection' && (
+            <p className="text-orange-600">Both characters selected! Waiting for stage transition...</p>
           )}
         </div>
       </div>
