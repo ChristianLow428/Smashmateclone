@@ -59,6 +59,8 @@ class SupabaseMatchmakingService {
   private onErrorCallback: ((error: string) => void) | null = null
   private pollingInterval: NodeJS.Timeout | null = null
   private isSearching: boolean = false
+  private lastMatchUpdate: Match | null = null
+  private matchStatusPollingInterval: NodeJS.Timeout | null = null
 
   constructor() {
     // Initialize real-time subscriptions
@@ -467,6 +469,9 @@ class SupabaseMatchmakingService {
   private subscribeToMatch(matchId: string) {
     console.log('Setting up match subscription for:', matchId)
     
+    // Start polling as a fallback immediately
+    this.startMatchStatusPolling(matchId)
+    
     // Subscribe to match updates
     this.matchChannel = supabase
       .channel(`match:${matchId}`)
@@ -495,6 +500,8 @@ class SupabaseMatchmakingService {
           }, 1000)
         } else if (status === 'SUBSCRIBED') {
           console.log('Match subscription successful')
+        } else if (status === 'CLOSED') {
+          console.log('Match subscription closed, relying on polling fallback')
         }
       })
 
@@ -690,6 +697,9 @@ class SupabaseMatchmakingService {
     try {
       console.log('Leaving match:', matchId)
       
+      // Stop polling
+      this.stopMatchStatusPolling()
+      
       // Update player status to offline
       if (this.currentPlayerId) {
         await supabase
@@ -724,6 +734,7 @@ class SupabaseMatchmakingService {
       this.currentMatchId = null
       this.currentPlayerId = null
       this.isSearching = false
+      this.lastMatchUpdate = null
       
       // Stop polling
       if (this.pollingInterval) {
@@ -1022,6 +1033,54 @@ class SupabaseMatchmakingService {
     this.isSearching = false
     
     console.log('Supabase matchmaking service disconnected')
+  }
+
+  // Add polling fallback for match status updates
+  private startMatchStatusPolling(matchId: string) {
+    console.log('Starting match status polling as fallback')
+    
+    // Poll for match updates every 3 seconds
+    const pollInterval = setInterval(async () => {
+      try {
+        const { data: match, error } = await supabase
+          .from('matches')
+          .select('*')
+          .eq('id', matchId)
+          .single()
+
+        if (error) {
+          console.error('Error polling match status:', error)
+          return
+        }
+
+        if (match) {
+          // Check if this is a new update (compare with last known state)
+          const lastUpdate = this.lastMatchUpdate
+          if (!lastUpdate || 
+              lastUpdate.status !== match.status ||
+              JSON.stringify(lastUpdate.character_selection) !== JSON.stringify(match.character_selection) ||
+              JSON.stringify(lastUpdate.stage_striking) !== JSON.stringify(match.stage_striking)) {
+            
+            console.log('Polling detected match update, triggering handleMatchUpdate')
+            this.lastMatchUpdate = match
+            this.handleMatchUpdate({ new: match })
+          }
+        }
+      } catch (error) {
+        console.error('Error in match status polling:', error)
+      }
+    }, 3000)
+
+    // Store the interval so we can clear it later
+    this.matchStatusPollingInterval = pollInterval
+  }
+
+  private stopMatchStatusPolling() {
+    if (this.matchStatusPollingInterval) {
+      clearInterval(this.matchStatusPollingInterval)
+      this.matchStatusPollingInterval = null
+      console.log('Stopped match status polling')
+    }
   }
 }
 

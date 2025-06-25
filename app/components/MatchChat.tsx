@@ -53,6 +53,8 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
 
         if (error) {
           console.error('Error loading chat messages:', error)
+          // If there's an error loading messages, just start with empty messages
+          setMessages([])
           return
         }
 
@@ -69,6 +71,8 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
         setMessages(chatMessages)
       } catch (error) {
         console.error('Error loading messages:', error)
+        // If there's an error, just start with empty messages
+        setMessages([])
       }
     }
 
@@ -90,6 +94,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
 
           if (error) {
             console.error('Error polling chat messages:', error)
+            // Don't update messages on error, just continue polling
             return
           }
 
@@ -106,6 +111,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
           setMessages(chatMessages)
         } catch (error) {
           console.error('Error polling messages:', error)
+          // Don't update messages on error, just continue polling
         }
       }, 2000) // Poll every 2 seconds
     }
