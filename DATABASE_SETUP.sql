@@ -1,22 +1,26 @@
--- Fix Supabase for Vercel Deployment
--- Run this in your Supabase SQL Editor
+-- Complete Database Setup for Smashmate Clone (NextAuth)
+-- Run this entire script in your Supabase SQL Editor
 
--- Drop existing tables if they exist
+-- ========================================
+-- MATCHMAKING TABLES
+-- ========================================
+
+-- Drop existing tables if they exist (to avoid conflicts)
 DROP TABLE IF EXISTS match_chat_messages CASCADE;
 DROP TABLE IF EXISTS game_results CASCADE;
 DROP TABLE IF EXISTS matches CASCADE;
 DROP TABLE IF EXISTS matchmaking_players CASCADE;
 
--- Create matchmaking_players table with NextAuth user IDs
+-- Players table to track who's searching
 CREATE TABLE matchmaking_players (
-  id TEXT PRIMARY KEY, -- NextAuth user ID
+  id TEXT PRIMARY KEY, -- NextAuth user ID (like "110871884416486397187")
   preferences JSONB NOT NULL,
   status TEXT DEFAULT 'searching' CHECK (status IN ('searching', 'in_match', 'offline')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create matches table
+-- Matches table for real-time matchmaking
 CREATE TABLE matches (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   player1_id TEXT REFERENCES matchmaking_players(id) ON DELETE CASCADE,
@@ -33,7 +37,7 @@ CREATE TABLE matches (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create match chat messages table
+-- Match chat messages
 CREATE TABLE match_chat_messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   match_id UUID REFERENCES matches(id) ON DELETE CASCADE,
@@ -42,38 +46,41 @@ CREATE TABLE match_chat_messages (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create game results table
-CREATE TABLE game_results (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  match_id UUID REFERENCES matches(id) ON DELETE CASCADE,
-  game_number INTEGER NOT NULL,
-  winner INTEGER NOT NULL CHECK (winner IN (0, 1)),
-  stage TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+-- ========================================
+-- INDEXES FOR PERFORMANCE
+-- ========================================
 
--- Create indexes
 CREATE INDEX idx_matchmaking_players_status ON matchmaking_players(status);
 CREATE INDEX idx_matches_status ON matches(status);
 CREATE INDEX idx_matches_player1_id ON matches(player1_id);
 CREATE INDEX idx_matches_player2_id ON matches(player2_id);
 CREATE INDEX idx_match_chat_messages_match_id ON match_chat_messages(match_id);
-CREATE INDEX idx_game_results_match_id ON game_results(match_id);
 
--- Enable RLS but with permissive policies for now
+-- ========================================
+-- ROW LEVEL SECURITY (RLS)
+-- ========================================
+
+-- Enable RLS on all tables
 ALTER TABLE matchmaking_players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE matches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE match_chat_messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE game_results ENABLE ROW LEVEL SECURITY;
 
 -- Create permissive policies (for development - you can make these more restrictive later)
 CREATE POLICY "Allow all operations on matchmaking_players" ON matchmaking_players FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all operations on matches" ON matches FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all operations on match_chat_messages" ON match_chat_messages FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all operations on game_results" ON game_results FOR ALL USING (true) WITH CHECK (true);
 
--- Enable realtime
+-- ========================================
+-- ENABLE REALTIME
+-- ========================================
+
+-- Enable realtime for the tables
 ALTER PUBLICATION supabase_realtime ADD TABLE matchmaking_players;
 ALTER PUBLICATION supabase_realtime ADD TABLE matches;
 ALTER PUBLICATION supabase_realtime ADD TABLE match_chat_messages;
-ALTER PUBLICATION supabase_realtime ADD TABLE game_results; 
+
+-- ========================================
+-- SUCCESS MESSAGE
+-- ========================================
+
+SELECT 'Database setup completed successfully! Matchmaking tables are ready.' as status; 

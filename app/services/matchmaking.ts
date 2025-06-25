@@ -89,7 +89,7 @@ class MatchmakingService {
     if (this.ws) {
       this.ws.close(1000, 'Reconnecting')
     }
-    
+
     this.ws = new WebSocket(wsUrl)
 
     this.ws.onopen = () => {
@@ -182,7 +182,7 @@ class MatchmakingService {
           this.sendSearchMessage(preferences)
         } else {
           console.log('WebSocket still not ready, state:', this.ws?.readyState)
-          this.onErrorCallback?.('Not connected to matchmaking server')
+      this.onErrorCallback?.('Not connected to matchmaking server')
         }
       }, 1000)
       return

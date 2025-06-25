@@ -165,7 +165,7 @@ class SupabaseMatchmakingService {
       const { data: ourPlayer } = await supabase
         .from('matchmaking_players')
         .select('*')
-        .eq('user_id', this.currentPlayerId)
+        .eq('id', this.currentPlayerId)
         .single()
 
       if (!ourPlayer) return
@@ -175,7 +175,7 @@ class SupabaseMatchmakingService {
         .from('matchmaking_players')
         .select('*')
         .eq('status', 'searching')
-        .neq('user_id', this.currentPlayerId)
+        .neq('id', this.currentPlayerId)
         .eq('preferences->island', ourPlayer.preferences.island)
         .limit(1)
 
@@ -236,20 +236,11 @@ class SupabaseMatchmakingService {
     if (!this.currentPlayerId) return
 
     try {
-      // First, get our matchmaking player record
-      const { data: ourPlayer } = await supabase
-        .from('matchmaking_players')
-        .select('*')
-        .eq('user_id', this.currentPlayerId)
-        .single()
-
-      if (!ourPlayer) return
-
-      // Then find matches that reference our player record
+      // Find matches that reference our player ID directly
       const { data: match } = await supabase
         .from('matches')
         .select('*')
-        .or(`player1_id.eq.${ourPlayer.id},player2_id.eq.${ourPlayer.id}`)
+        .or(`player1_id.eq.${this.currentPlayerId},player2_id.eq.${this.currentPlayerId}`)
         .eq('status', 'character_selection')
         .single()
 
@@ -303,17 +294,8 @@ class SupabaseMatchmakingService {
     const match = payload.new
     if (!match) return
 
-    // Get our matchmaking player record to determine player index
-    const { data: ourPlayer } = await supabase
-      .from('matchmaking_players')
-      .select('*')
-      .eq('user_id', this.currentPlayerId)
-      .single()
-
-    if (!ourPlayer) return
-
-    // Determine player index
-    const playerIndex = match.player1_id === ourPlayer.id ? 0 : 1
+    // Determine player index directly from the match
+    const playerIndex = match.player1_id === this.currentPlayerId ? 0 : 1
 
     // Send match status update
     this.onMatchStatusCallback?.({
@@ -357,7 +339,7 @@ class SupabaseMatchmakingService {
       const { data: existingPlayer } = await supabase
         .from('matchmaking_players')
         .select('*')
-        .eq('user_id', this.currentPlayerId)
+        .eq('id', this.currentPlayerId)
         .single()
 
       if (existingPlayer) {
@@ -372,7 +354,7 @@ class SupabaseMatchmakingService {
 
       // Insert or update player in matchmaking queue
       console.log('Attempting to insert/update player:', {
-        user_id: this.currentPlayerId,
+        id: this.currentPlayerId,
         status: 'searching',
         preferences: preferences
       })
@@ -380,7 +362,7 @@ class SupabaseMatchmakingService {
       const { data: insertData, error: insertError } = await supabase
         .from('matchmaking_players')
         .upsert({
-          user_id: this.currentPlayerId,
+          id: this.currentPlayerId,
           status: 'searching',
           preferences: preferences,
           created_at: new Date().toISOString()
@@ -421,7 +403,7 @@ class SupabaseMatchmakingService {
       await supabase
         .from('matchmaking_players')
         .update({ status: 'offline' })
-        .eq('user_id', this.currentPlayerId)
+        .eq('id', this.currentPlayerId)
 
       this.currentPlayerId = null
       
@@ -442,7 +424,7 @@ class SupabaseMatchmakingService {
         await supabase
           .from('matchmaking_players')
           .update({ status: 'offline' })
-          .eq('user_id', this.currentPlayerId)
+          .eq('id', this.currentPlayerId)
       }
 
       // Clean up subscriptions
@@ -472,16 +454,7 @@ class SupabaseMatchmakingService {
 
       if (!match) return
 
-      // Get our matchmaking player record to determine player index
-      const { data: ourPlayer } = await supabase
-        .from('matchmaking_players')
-        .select('*')
-        .eq('user_id', this.currentPlayerId)
-        .single()
-
-      if (!ourPlayer) return
-
-      const playerIndex = match.player1_id === ourPlayer.id ? 0 : 1
+      const playerIndex = match.player1_id === this.currentPlayerId ? 0 : 1
       const characterSelection = match.character_selection || {}
       
       if (playerIndex === 0) {
@@ -581,16 +554,7 @@ class SupabaseMatchmakingService {
 
       if (!match) return
 
-      // Get our matchmaking player record to determine player index
-      const { data: ourPlayer } = await supabase
-        .from('matchmaking_players')
-        .select('*')
-        .eq('user_id', this.currentPlayerId)
-        .single()
-
-      if (!ourPlayer) return
-
-      const playerIndex = match.player1_id === ourPlayer.id ? 0 : 1
+      const playerIndex = match.player1_id === this.currentPlayerId ? 0 : 1
       const gameResultValidation = match.game_result_validation || {}
 
       // Record this player's reported result
