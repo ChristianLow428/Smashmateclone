@@ -396,20 +396,22 @@ class SupabaseMatchmakingService {
     try {
       console.log('Looking for existing match for player:', this.currentPlayerId)
       
-      // Find matches that reference our player ID directly - only active matches
-      const { data: match, error } = await supabase
+      // Find matches that reference our player ID - get the most recent one
+      const { data: matches, error } = await supabase
         .from('matches')
         .select('*')
         .or(`player1_id.eq.${this.currentPlayerId},player2_id.eq.${this.currentPlayerId}`)
         .in('status', ['character_selection', 'stage_striking', 'active']) // Only active matches
-        .single()
+        .order('created_at', { ascending: false })
+        .limit(1)
 
       if (error) {
         console.error('Error finding match:', error)
         return
       }
 
-      if (match) {
+      if (matches && matches.length > 0) {
+        const match = matches[0]
         console.log('Found existing match:', match.id, 'Status:', match.status)
         this.currentMatchId = match.id
         
@@ -583,30 +585,34 @@ class SupabaseMatchmakingService {
   }
 
   private async cleanupStaleData() {
+    if (!this.currentPlayerId) return
+
     try {
       console.log('Cleaning up stale data for player:', this.currentPlayerId)
       
-      // Clean up any existing subscriptions
-      if (this.matchChannel) {
-        this.matchChannel.unsubscribe()
-        this.matchChannel = null
+      // Clean up stale matchmaking entries
+      await supabase
+        .from('matchmaking_players')
+        .delete()
+        .eq('id', this.currentPlayerId)
+
+      // Clean up stale matches - mark old matches as completed
+      const { data: staleMatches } = await supabase
+        .from('matches')
+        .select('id')
+        .or(`player1_id.eq.${this.currentPlayerId},player2_id.eq.${this.currentPlayerId}`)
+        .in('status', ['character_selection', 'stage_striking', 'active'])
+        .order('created_at', { ascending: false })
+        .range(1, 100) // Keep only the most recent match, mark others as completed
+
+      if (staleMatches && staleMatches.length > 0) {
+        console.log(`Cleaning up ${staleMatches.length} stale matches`)
+        await supabase
+          .from('matches')
+          .update({ status: 'completed' })
+          .in('id', staleMatches.map(m => m.id))
       }
-      
-      if (this.chatChannel) {
-        this.chatChannel.unsubscribe()
-        this.chatChannel = null
-      }
-      
-      // Stop any existing polling
-      if (this.pollingInterval) {
-        clearInterval(this.pollingInterval)
-        this.pollingInterval = null
-      }
-      
-      // Reset state
-      this.currentMatchId = null
-      this.isSearching = false
-      
+
       console.log('Stale data cleanup completed')
     } catch (error) {
       console.error('Error cleaning up stale data:', error)

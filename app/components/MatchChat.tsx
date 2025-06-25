@@ -55,7 +55,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
         }
 
         const chatMessages = data.map(msg => ({
-          id: msg.id,
+            id: msg.id,
           sender: session?.user && msg.sender_id === session.user.email
             ? session.user.name || 'You'
             : 'Opponent',
