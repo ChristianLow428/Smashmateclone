@@ -107,8 +107,10 @@ export default function FreeBattle() {
         console.log('Match completed')
         setMatchEnded(true)
       } else if (matchStatus.type === 'opponent_left') {
-        console.log('Opponent left')
+        console.log('Opponent left message received in free-battle page')
         setMatchEnded(true)
+        // Keep the opponent and playerIndex so the TournamentMatch component can show the chat
+        // The opponent_left message will be passed to TournamentMatch through matchStatus
       }
     }
   }, [matchStatus, useWebSocket, opponent, playerIndex, currentMatch])

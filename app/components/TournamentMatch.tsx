@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import MatchChat from './MatchChat'
 
@@ -86,6 +86,7 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
   const [isPickingStage, setIsPickingStage] = useState<boolean>(false)
   const [isReportingResult, setIsReportingResult] = useState<boolean>(false)
   const [opponentLeft, setOpponentLeft] = useState<boolean>(false)
+  const chatRef = useRef<any>(null)
   
   // Game result validation state
   const [gameResultPending, setGameResultPending] = useState<boolean>(false)
@@ -210,6 +211,7 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
         // Handle match reset - this will be handled by the parent component
         console.log('Match reset received in TournamentMatch')
       } else if (matchStatus.type === 'opponent_left') {
+        console.log('OPPONENT_LEFT message received in TournamentMatch!')
         // Auto-open chat when opponent leaves
         setShowChat(true)
         setOpponentLeft(true)
@@ -217,7 +219,7 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
         addSystemMessageToChat('Your opponent has left the match.')
       }
     }
-  }, [matchStatus, playerIndex]) // Add matchStatus to dependency array
+  }, [matchStatus, playerIndex, opponentLeft]) // Add matchStatus to dependency array
 
   // Monitor character selection state and force transition if needed
   useEffect(() => {
@@ -275,8 +277,12 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
 
   // Function to add system message to chat
   const addSystemMessageToChat = (message: string) => {
-    // This will be handled by the MatchChat component through the opponentLeft prop
-    console.log('Opponent left, system message:', message)
+    console.log('Adding system message to chat:', message)
+    if (chatRef.current) {
+      chatRef.current.addSystemMessage(message)
+    } else {
+      console.log('Chat ref not available, cannot add system message')
+    }
   }
 
   const renderCharacterSelection = () => {
@@ -735,6 +741,7 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
                 opponent={opponent}
                 onLeaveMatch={onLeaveMatch}
                 opponentLeft={opponentLeft}
+                ref={chatRef}
               />
             </div>
           )}

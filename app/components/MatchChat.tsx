@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
 import { useSession } from 'next-auth/react'
 import { supabase } from '@/utils/supabase/client'
 
@@ -31,7 +31,11 @@ interface MatchChatProps {
   opponentLeft?: boolean
 }
 
-export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLeft = false }: MatchChatProps) {
+export interface MatchChatRef {
+  addSystemMessage: (message: string) => void
+}
+
+const MatchChat = forwardRef<MatchChatRef, MatchChatProps>(({ matchId, opponent, onLeaveMatch, opponentLeft = false }, ref) => {
   const { data: session } = useSession()
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
@@ -40,6 +44,20 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
   const chatChannel = useRef<any>(null)
   const pollingInterval = useRef<NodeJS.Timeout | null>(null)
   const [usePolling, setUsePolling] = useState(false)
+
+  // Expose methods to parent component
+  useImperativeHandle(ref, () => ({
+    addSystemMessage: (message: string) => {
+      const systemMessage: Message = {
+        id: `system-${Date.now()}`,
+        sender: 'System',
+        content: message,
+        timestamp: new Date(),
+        type: 'system'
+      }
+      setMessages(prev => [...prev, systemMessage])
+    }
+  }))
 
   useEffect(() => {
     // Load existing chat messages
@@ -285,7 +303,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
       }
 
       console.log('Message sent successfully')
-      setNewMessage('')
+    setNewMessage('')
     } catch (error) {
       console.error('Error sending message:', error)
     }
@@ -425,4 +443,6 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
       </div>
     </div>
   )
-} 
+})
+
+export default MatchChat 
