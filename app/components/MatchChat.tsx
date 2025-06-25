@@ -38,6 +38,8 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
   const [opponentLeft, setOpponentLeft] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatChannel = useRef<any>(null)
+  const pollingInterval = useRef<NodeJS.Timeout | null>(null)
+  const [usePolling, setUsePolling] = useState(false)
 
   useEffect(() => {
     // Load existing chat messages
@@ -72,19 +74,84 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
 
     loadMessages()
 
+    // Start polling for new messages
+    const startPolling = () => {
+      console.log('Starting chat polling as fallback')
+      setUsePolling(true)
+      setIsConnected(true)
+      
+      pollingInterval.current = setInterval(async () => {
+        try {
+          const { data, error } = await supabase
+            .from('match_chat_messages')
+            .select('*')
+            .eq('match_id', matchId)
+            .order('created_at', { ascending: true })
+
+          if (error) {
+            console.error('Error polling chat messages:', error)
+            return
+          }
+
+          const chatMessages = data.map(msg => ({
+            id: msg.id,
+            sender: session?.user && msg.sender_id === session.user.email
+              ? session.user.name || 'You'
+              : 'Opponent',
+            content: msg.content,
+            timestamp: new Date(msg.created_at),
+            type: 'user' as const
+          }))
+
+          setMessages(chatMessages)
+        } catch (error) {
+          console.error('Error polling messages:', error)
+        }
+      }, 2000) // Poll every 2 seconds
+    }
+
     // Subscribe to new chat messages with better error handling
     const setupChatSubscription = async () => {
       try {
         console.log('Setting up chat subscription for match:', matchId)
-        console.log('Supabase client config:', {
-          hasRealtime: !!supabase.realtime
+        
+        // First, test if real-time is working at all
+        const testChannel = supabase.channel('test-connection')
+        testChannel.subscribe((status) => {
+          console.log('Test channel status:', status)
+          if (status === 'SUBSCRIBED') {
+            console.log('Real-time is working, proceeding with chat subscription')
+            supabase.removeChannel(testChannel)
+            setupActualChatSubscription()
+          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+            console.log('Real-time not available, using polling')
+            supabase.removeChannel(testChannel)
+            startPolling()
+          }
         })
         
-        // Create a unique channel name to avoid conflicts
+        // Timeout for test
+        setTimeout(() => {
+          if (!isConnected && !usePolling) {
+            console.log('Real-time test timeout, using polling')
+            supabase.removeChannel(testChannel)
+            startPolling()
+          }
+        }, 3000)
+
+      } catch (error) {
+        console.error('Error setting up chat subscription:', error)
+        setIsConnected(false)
+        startPolling()
+      }
+    }
+
+    const setupActualChatSubscription = () => {
+      try {
+        // Create a unique channel name
         const channelName = `chat-${matchId}-${Date.now()}`
         console.log('Using channel name:', channelName)
         
-        // Use the same channel format as the Supabase matchmaking service
         chatChannel.current = supabase
           .channel(channelName)
           .on(
@@ -112,47 +179,26 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
           )
           .subscribe((status) => {
             console.log('Chat subscription status:', status)
-            console.log('Channel:', chatChannel.current?.topic)
-            setIsConnected(status === 'SUBSCRIBED')
             
-            if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-              console.error('Chat subscription failed with status:', status)
-              console.log('Retrying in 3 seconds...')
-              setTimeout(() => {
-                if (chatChannel.current) {
-                  console.log('Removing failed channel:', chatChannel.current.topic)
-                  supabase.removeChannel(chatChannel.current)
-                  chatChannel.current = null
-                  setupChatSubscription()
-                }
-              }, 3000)
-            } else if (status === 'SUBSCRIBED') {
+            if (status === 'SUBSCRIBED') {
               console.log('Chat subscription successful')
-              console.log('Channel topic:', chatChannel.current?.topic)
+              setIsConnected(true)
+              setUsePolling(false)
               // Send a test message to verify connection
               setTimeout(() => {
                 sendTestMessage()
               }, 1000)
+            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+              console.error(`Chat subscription failed with status: ${status}, falling back to polling`)
+              setIsConnected(false)
+              setUsePolling(true)
+              startPolling()
             }
           })
-
-        // Test the connection by sending a system message
-        setTimeout(() => {
-          if (isConnected) {
-            console.log('Chat connection test successful')
-          } else {
-            console.log('Chat connection test failed, retrying...')
-            if (chatChannel.current) {
-              supabase.removeChannel(chatChannel.current)
-              chatChannel.current = null
-              setupChatSubscription()
-            }
-          }
-        }, 4000)
-
       } catch (error) {
-        console.error('Error setting up chat subscription:', error)
+        console.error('Error setting up actual chat subscription:', error)
         setIsConnected(false)
+        startPolling()
       }
     }
 
@@ -161,9 +207,10 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
     return () => {
       console.log('Cleaning up chat subscription')
       if (chatChannel.current) {
-        console.log('Removing channel on cleanup:', chatChannel.current.topic)
         supabase.removeChannel(chatChannel.current)
-        chatChannel.current = null
+      }
+      if (pollingInterval.current) {
+        clearInterval(pollingInterval.current)
       }
     }
   }, [matchId, session?.user?.email, session?.user?.name])
@@ -253,9 +300,11 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
           >
             Test
           </button>
-        <div className="flex items-center space-x-1">
-          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
-          <span className="text-xs">{isConnected ? 'Connected' : 'Disconnected'}</span>
+          <div className="flex items-center space-x-1">
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
+            <span className="text-xs">
+              {isConnected ? (usePolling ? 'Polling' : 'Connected') : 'Disconnected'}
+            </span>
           </div>
         </div>
       </div>
