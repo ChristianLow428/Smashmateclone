@@ -112,7 +112,7 @@ class SupabaseMatchmakingService {
           console.log('Realtime subscription timeout, starting polling fallback')
           this.startPolling()
         }
-      }, 5000) // 5 second timeout
+      }, 3000) // Reduced timeout to 3 seconds
       
     } catch (error) {
       console.error('Error initializing realtime:', error)
@@ -198,7 +198,7 @@ class SupabaseMatchmakingService {
 
       // Filter by island preference in JavaScript
       const compatibleOpponents = opponents?.filter(opponent => 
-        opponent.preferences?.island === ourPlayer.preferences.island
+        opponent.preferences?.island === (ourPlayer as any).preferences?.island
       ) || []
 
       if (compatibleOpponents.length > 0) {
@@ -272,9 +272,9 @@ class SupabaseMatchmakingService {
       }
 
       if (match) {
-        this.currentMatchId = match.id
-        this.subscribeToMatch(match.id)
-        this.onMatchCallback?.(match.id)
+        this.currentMatchId = match.id as string
+        this.subscribeToMatch(match.id as string)
+        this.onMatchCallback?.(match.id as string)
       }
     } catch (error) {
       console.error('Error finding match:', error)
@@ -362,7 +362,7 @@ class SupabaseMatchmakingService {
       this.isSearching = true
       console.log('Starting search with player ID:', this.currentPlayerId)
 
-      // Check if already in queue
+      // Check if already in queue and reset if needed
       const { data: existingPlayer } = await getSupabaseClient()
         .from('matchmaking_players')
         .select('*')
@@ -374,8 +374,12 @@ class SupabaseMatchmakingService {
           console.log('Already searching for match')
           return
         } else if (existingPlayer.status === 'in_match') {
-          console.log('Already in a match')
-          throw new Error('Already in a match')
+          console.log('Found existing match status, resetting to searching')
+          // Reset the status to searching instead of throwing an error
+          await getSupabaseClient()
+            .from('matchmaking_players')
+            .update({ status: 'searching' })
+            .eq('id', this.currentPlayerId)
         }
       }
 
@@ -413,10 +417,10 @@ class SupabaseMatchmakingService {
       if (!this.pollingInterval) {
         this.startPolling()
       }
-      
     } catch (error) {
       console.error('Error starting search:', error)
-      this.onErrorCallback?.(error instanceof Error ? error.message : 'Failed to start search')
+      this.isSearching = false
+      this.currentPlayerId = null
       throw error
     }
   }
