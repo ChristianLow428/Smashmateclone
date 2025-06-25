@@ -853,14 +853,27 @@ class SupabaseMatchmakingService {
       let newCurrentPlayer = stageStriking.currentPlayer
 
       if (newStrikesRemaining === 0) {
-        // Switch to next player or end stage striking
-        if (newCurrentPlayer === 0) {
-          newCurrentPlayer = 1
-          newStrikesRemaining = 2 // Player 2 bans 2 stages
+        // Determine next phase based on current game
+        if (match.current_game === 1) {
+          // Game 1: Player 1 bans 1, Player 2 bans 2, Player 1 picks
+          if (newCurrentPlayer === 0) {
+            newCurrentPlayer = 1
+            newStrikesRemaining = 2 // Player 2 bans 2 stages
+          } else {
+            // Player 2 finished banning, now Player 1 picks
+            newCurrentPlayer = 0
+            newStrikesRemaining = 0 // No more strikes, just pick
+          }
         } else {
-          // Player 2 finished banning, now Player 1 picks
-          newCurrentPlayer = 0
-          newStrikesRemaining = 0 // No more strikes, just pick
+          // Counterpicks: Winner bans 2 stages, then loser picks
+          const winner = match.player1_score > match.player2_score ? 0 : 1
+          const loser = winner === 0 ? 1 : 0
+          
+          if (newCurrentPlayer === winner) {
+            // Winner finished banning 2 stages, now loser picks
+            newCurrentPlayer = loser
+            newStrikesRemaining = 0 // No more strikes, just pick
+          }
         }
       }
 
