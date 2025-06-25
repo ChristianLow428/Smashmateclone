@@ -28,14 +28,14 @@ interface MatchChatProps {
     }
   }
   onLeaveMatch: () => void
+  opponentLeft?: boolean
 }
 
-export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChatProps) {
+export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLeft = false }: MatchChatProps) {
   const { data: session } = useSession()
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [isConnected, setIsConnected] = useState(false)
-  const [opponentLeft, setOpponentLeft] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatChannel = useRef<any>(null)
   const pollingInterval = useRef<NodeJS.Timeout | null>(null)
@@ -226,6 +226,20 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // Add system message when opponent leaves
+  useEffect(() => {
+    if (opponentLeft) {
+      const systemMessage: Message = {
+        id: `system-${Date.now()}`,
+        sender: 'System',
+        content: 'Your opponent has left the match.',
+        timestamp: new Date(),
+        type: 'system'
+      }
+      setMessages(prev => [...prev, systemMessage])
+    }
+  }, [opponentLeft])
+
   const sendMessage = async () => {
     if (!newMessage.trim() || !session?.user?.email || opponentLeft) {
       return
@@ -290,12 +304,12 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
   return (
     <div className="bg-white rounded-lg shadow-md h-full flex flex-col">
       {/* Header */}
-      <div className="bg-blue-600 text-white p-3 rounded-t-lg flex justify-between items-center">
+      <div className={`text-white p-3 rounded-t-lg flex justify-between items-center ${opponentLeft ? 'bg-red-600' : 'bg-blue-600'}`}>
         <div>
           <h3 className="text-sm font-semibold">Match Chat</h3>
           <p className="text-xs opacity-90">
             {opponent.preferences.island} ({opponent.preferences.connection})
-            {opponentLeft && <span className="text-red-300 ml-1">• Left</span>}
+            {opponentLeft && <span className="text-red-200 ml-1 font-semibold">• OPPONENT LEFT</span>}
           </p>
         </div>
         <div className="flex items-center space-x-2">
@@ -317,6 +331,16 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
 
       {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
+        {opponentLeft && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+              <span className="text-red-800 font-semibold text-sm">Opponent has left the match</span>
+            </div>
+            <p className="text-red-700 text-xs mt-1">You can no longer send messages to them.</p>
+          </div>
+        )}
+        
         {messages.length === 0 ? (
           <div className="text-center text-gray-500 mt-4">
             <p className="text-sm">Start chatting!</p>

@@ -84,6 +84,7 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
   const [isBanningStage, setIsBanningStage] = useState<boolean>(false)
   const [isPickingStage, setIsPickingStage] = useState<boolean>(false)
   const [isReportingResult, setIsReportingResult] = useState<boolean>(false)
+  const [opponentLeft, setOpponentLeft] = useState<boolean>(false)
   
   // Game result validation state
   const [gameResultPending, setGameResultPending] = useState<boolean>(false)
@@ -209,6 +210,9 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
       } else if (matchStatus.type === 'opponent_left') {
         // Auto-open chat when opponent leaves
         setShowChat(true)
+        setOpponentLeft(true)
+        // Add system message to chat
+        addSystemMessageToChat('Your opponent has left the match.')
       }
     }
   }, [matchStatus, playerIndex]) // Add matchStatus to dependency array
@@ -265,6 +269,12 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
     reportGameResult(matchId, winner).finally(() => {
       setIsReportingResult(false)
     })
+  }
+
+  // Function to add system message to chat
+  const addSystemMessageToChat = (message: string) => {
+    // This will be handled by the MatchChat component through the opponentLeft prop
+    console.log('Opponent left, system message:', message)
   }
 
   const renderCharacterSelection = () => {
@@ -694,6 +704,7 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
                 matchId={matchId}
                 opponent={opponent}
                 onLeaveMatch={onLeaveMatch}
+                opponentLeft={opponentLeft}
               />
             </div>
           )}
