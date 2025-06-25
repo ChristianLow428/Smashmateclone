@@ -91,6 +91,19 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
   const [pendingResult, setPendingResult] = useState<{reportedBy: number, winner: number} | null>(null)
   const [conflictResult, setConflictResult] = useState<{player1Reported: number, player2Reported: number} | null>(null)
 
+  // Extract character selection data from matchStatus
+  const player1CharacterFromStatus = matchStatus?.character_selection?.player1Character || ''
+  const player2CharacterFromStatus = matchStatus?.character_selection?.player2Character || ''
+  const bothReadyFromStatus = matchStatus?.character_selection?.bothReady || false
+  
+  console.log('MatchStatus debug:', {
+    matchStatus,
+    character_selection: matchStatus?.character_selection,
+    player1CharacterFromStatus,
+    player2CharacterFromStatus,
+    bothReadyFromStatus
+  })
+
   useEffect(() => {
     // Handle matchStatus updates
     if (matchStatus) {
