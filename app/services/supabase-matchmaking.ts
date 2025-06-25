@@ -147,12 +147,16 @@ class SupabaseMatchmakingService {
 
       if (ourPlayer && ourPlayer.status === 'in_match') {
         // We got matched, find our match
+        console.log('Player status changed to in_match, finding our match')
         await this.findOurMatch()
         return
       }
 
-      // Try to find an opponent
-      await this.tryMatchPlayers()
+      // Only try to match if we're still searching
+      if (ourPlayer && ourPlayer.status === 'searching') {
+        console.log('Polling: Trying to find opponents...')
+        await this.tryMatchPlayers()
+      }
     } catch (error) {
       console.error('Error in polling:', error)
     }
@@ -183,7 +187,10 @@ class SupabaseMatchmakingService {
         .eq('id', this.currentPlayerId)
         .single()
 
-      if (!ourPlayer) return
+      if (!ourPlayer || ourPlayer.status !== 'searching') {
+        console.log('Player not found or not searching, skipping match attempt')
+        return
+      }
 
       // Find a compatible opponent - only look for players who are actively searching
       const { data: opponents, error } = await supabase
@@ -208,7 +215,19 @@ class SupabaseMatchmakingService {
       if (compatibleOpponents.length > 0) {
         const opponent = compatibleOpponents[0]
         console.log('Creating match with opponent:', opponent.id)
-        await this.createMatch(ourPlayer, opponent)
+        
+        // Double-check that both players are still searching before creating match
+        const { data: currentOpponent } = await supabase
+          .from('matchmaking_players')
+          .select('*')
+          .eq('id', opponent.id)
+          .single()
+
+        if (currentOpponent && currentOpponent.status === 'searching') {
+          await this.createMatch(ourPlayer, opponent)
+        } else {
+          console.log('Opponent is no longer searching, skipping match creation')
+        }
       } else {
         console.log('No compatible opponents found, continuing to search...')
       }
@@ -220,6 +239,38 @@ class SupabaseMatchmakingService {
 
   private async createMatch(player1: any, player2: any) {
     try {
+      console.log('Creating match between:', player1.id, 'and', player2.id)
+      
+      // First, try to update both players to in_match status atomically
+      const { error: updateError } = await supabase
+        .from('matchmaking_players')
+        .update({ status: 'in_match' })
+        .in('id', [player1.id, player2.id])
+        .eq('status', 'searching') // Only update if still searching
+
+      if (updateError) {
+        console.error('Error updating players to in_match:', updateError)
+        return
+      }
+
+      // Check if both players were actually updated
+      const { data: updatedPlayers } = await supabase
+        .from('matchmaking_players')
+        .select('*')
+        .in('id', [player1.id, player2.id])
+
+      const bothInMatch = updatedPlayers?.every(p => p.status === 'in_match')
+      
+      if (!bothInMatch) {
+        console.log('Not both players were updated to in_match, aborting match creation')
+        // Reset our player back to searching
+        await supabase
+          .from('matchmaking_players')
+          .update({ status: 'searching' })
+          .eq('id', player1.id)
+        return
+      }
+
       // Create the match
       const { data: match, error } = await supabase
         .from('matches')
@@ -247,15 +298,25 @@ class SupabaseMatchmakingService {
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Error creating match:', error)
+        // Reset both players back to searching
+        await supabase
+          .from('matchmaking_players')
+          .update({ status: 'searching' })
+          .in('id', [player1.id, player2.id])
+        return
+      }
 
-      // Update both players to in_match status
-      await supabase
-        .from('matchmaking_players')
-        .update({ status: 'in_match' })
-        .in('id', [player1.id, player2.id])
-
-      console.log('Match created:', match)
+      console.log('Match created successfully:', match.id)
+      
+      // Stop polling since we found a match
+      if (this.pollingInterval) {
+        clearInterval(this.pollingInterval)
+        this.pollingInterval = null
+        console.log('Stopped polling - match found')
+      }
+      
     } catch (error) {
       console.error('Error creating match:', error)
     }
