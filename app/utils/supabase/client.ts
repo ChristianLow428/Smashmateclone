@@ -1,13 +1,14 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-let supabaseClient: ReturnType<typeof createClient> | null = null
+// Lazy initialization to ensure environment variables are available at runtime
+let supabaseClient: SupabaseClient | null = null
 
-export function getSupabaseClient() {
-  // Only create a new client if one doesn't exist or if env vars have changed
+const getSupabaseClient = (): SupabaseClient => {
   if (!supabaseClient) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+    // Validate environment variables
     if (!supabaseUrl) {
       console.error('NEXT_PUBLIC_SUPABASE_URL is not defined')
       throw new Error('NEXT_PUBLIC_SUPABASE_URL is not defined')
@@ -18,6 +19,8 @@ export function getSupabaseClient() {
       throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY is not defined')
     }
 
+    console.log('Initializing Supabase client with URL:', supabaseUrl)
+    
     supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         autoRefreshToken: true,
@@ -26,19 +29,18 @@ export function getSupabaseClient() {
       }
     })
 
-    console.log('Supabase client created')
+    // Test the connection
+    supabaseClient.auth.getSession().then(({ data, error }: { data: any; error: any }) => {
+      if (error) {
+        console.error('Supabase auth error:', error)
+      } else {
+        console.log('Supabase client initialized successfully')
+      }
+    })
   }
 
   return supabaseClient
 }
 
-// Test the connection only once
-if (typeof window !== 'undefined') {
-  getSupabaseClient().auth.getSession().then(({ data, error }) => {
-    if (error) {
-      console.error('Supabase auth error:', error)
-    } else {
-      console.log('Supabase client initialized successfully')
-    }
-  })
-} 
+// Export the client with proper typing
+export const supabase = getSupabaseClient() 

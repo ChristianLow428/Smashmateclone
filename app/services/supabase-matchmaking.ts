@@ -1,4 +1,4 @@
-import { getSupabaseClient } from '../utils/supabase/client'
+import { supabase } from '../utils/supabase/client'
 import { RealtimeChannel } from '@supabase/supabase-js'
 
 export interface MatchmakingPreferences {
@@ -70,7 +70,7 @@ class SupabaseMatchmakingService {
       console.log('Initializing Supabase real-time subscriptions...')
       
       // Subscribe to matchmaking_players table for finding opponents
-      const playersChannel = getSupabaseClient()
+      const playersChannel = supabase
         .channel('matchmaking_players')
         .on(
           'postgres_changes',
@@ -112,7 +112,7 @@ class SupabaseMatchmakingService {
           console.log('Realtime subscription timeout, starting polling fallback')
           this.startPolling()
         }
-      }, 3000) // Reduced timeout to 3 seconds
+      }, 5000) // 5 second timeout
       
     } catch (error) {
       console.error('Error initializing realtime:', error)
@@ -137,7 +137,9 @@ class SupabaseMatchmakingService {
   private async pollForMatches() {
     try {
       // Check if we've been matched
-      const { data: ourPlayer } = await getSupabaseClient()
+      if (!this.currentPlayerId) return
+      
+      const { data: ourPlayer } = await supabase
         .from('matchmaking_players')
         .select('*')
         .eq('id', this.currentPlayerId)
@@ -175,7 +177,7 @@ class SupabaseMatchmakingService {
 
     try {
       // Get our preferences
-      const { data: ourPlayer } = await getSupabaseClient()
+      const { data: ourPlayer } = await supabase
         .from('matchmaking_players')
         .select('*')
         .eq('id', this.currentPlayerId)
@@ -184,7 +186,7 @@ class SupabaseMatchmakingService {
       if (!ourPlayer) return
 
       // Find a compatible opponent - use a different approach for JSONB query
-      const { data: opponents, error } = await getSupabaseClient()
+      const { data: opponents, error } = await supabase
         .from('matchmaking_players')
         .select('*')
         .eq('status', 'searching')
@@ -198,7 +200,7 @@ class SupabaseMatchmakingService {
 
       // Filter by island preference in JavaScript
       const compatibleOpponents = opponents?.filter(opponent => 
-        opponent.preferences?.island === (ourPlayer as any).preferences?.island
+        opponent.preferences?.island === ourPlayer.preferences.island
       ) || []
 
       if (compatibleOpponents.length > 0) {
@@ -214,7 +216,7 @@ class SupabaseMatchmakingService {
   private async createMatch(player1: any, player2: any) {
     try {
       // Create the match
-      const { data: match, error } = await getSupabaseClient()
+      const { data: match, error } = await supabase
         .from('matches')
         .insert({
           player1_id: player1.id,
@@ -243,7 +245,7 @@ class SupabaseMatchmakingService {
       if (error) throw error
 
       // Update both players to in_match status
-      await getSupabaseClient()
+      await supabase
         .from('matchmaking_players')
         .update({ status: 'in_match' })
         .in('id', [player1.id, player2.id])
@@ -259,7 +261,7 @@ class SupabaseMatchmakingService {
 
     try {
       // Find matches that reference our player ID directly
-      const { data: match, error } = await getSupabaseClient()
+      const { data: match, error } = await supabase
         .from('matches')
         .select('*')
         .or(`player1_id.eq.${this.currentPlayerId},player2_id.eq.${this.currentPlayerId}`)
@@ -272,9 +274,9 @@ class SupabaseMatchmakingService {
       }
 
       if (match) {
-        this.currentMatchId = match.id as string
-        this.subscribeToMatch(match.id as string)
-        this.onMatchCallback?.(match.id as string)
+        this.currentMatchId = match.id
+        this.subscribeToMatch(match.id)
+        this.onMatchCallback?.(match.id)
       }
     } catch (error) {
       console.error('Error finding match:', error)
@@ -283,7 +285,7 @@ class SupabaseMatchmakingService {
 
   private subscribeToMatch(matchId: string) {
     // Subscribe to match updates
-    this.matchChannel = getSupabaseClient()
+    this.matchChannel = supabase
       .channel(`match:${matchId}`)
       .on(
         'postgres_changes',
@@ -300,7 +302,7 @@ class SupabaseMatchmakingService {
       .subscribe()
 
     // Subscribe to chat messages
-    this.chatChannel = getSupabaseClient()
+    this.chatChannel = supabase
       .channel(`chat:${matchId}`)
       .on(
         'postgres_changes',
@@ -362,8 +364,8 @@ class SupabaseMatchmakingService {
       this.isSearching = true
       console.log('Starting search with player ID:', this.currentPlayerId)
 
-      // Check if already in queue and reset if needed
-      const { data: existingPlayer } = await getSupabaseClient()
+      // Check if already in queue
+      const { data: existingPlayer } = await supabase
         .from('matchmaking_players')
         .select('*')
         .eq('id', this.currentPlayerId)
@@ -374,12 +376,8 @@ class SupabaseMatchmakingService {
           console.log('Already searching for match')
           return
         } else if (existingPlayer.status === 'in_match') {
-          console.log('Found existing match status, resetting to searching')
-          // Reset the status to searching instead of throwing an error
-          await getSupabaseClient()
-            .from('matchmaking_players')
-            .update({ status: 'searching' })
-            .eq('id', this.currentPlayerId)
+          console.log('Already in a match')
+          throw new Error('Already in a match')
         }
       }
 
@@ -390,7 +388,7 @@ class SupabaseMatchmakingService {
         preferences: preferences
       })
       
-      const { data: insertData, error: insertError } = await getSupabaseClient()
+      const { data: insertData, error: insertError } = await supabase
         .from('matchmaking_players')
         .upsert({
           id: this.currentPlayerId,
@@ -417,10 +415,10 @@ class SupabaseMatchmakingService {
       if (!this.pollingInterval) {
         this.startPolling()
       }
+      
     } catch (error) {
       console.error('Error starting search:', error)
-      this.isSearching = false
-      this.currentPlayerId = null
+      this.onErrorCallback?.(error instanceof Error ? error.message : 'Failed to start search')
       throw error
     }
   }
@@ -431,7 +429,7 @@ class SupabaseMatchmakingService {
     try {
       this.isSearching = false
       
-      await getSupabaseClient()
+      await supabase
         .from('matchmaking_players')
         .update({ status: 'offline' })
         .eq('id', this.currentPlayerId)
@@ -452,7 +450,7 @@ class SupabaseMatchmakingService {
     try {
       // Update player status
       if (this.currentPlayerId) {
-        await getSupabaseClient()
+        await supabase
           .from('matchmaking_players')
           .update({ status: 'offline' })
           .eq('id', this.currentPlayerId)
@@ -477,7 +475,7 @@ class SupabaseMatchmakingService {
 
   public async selectCharacter(matchId: string, character: string) {
     try {
-      const { data: match } = await getSupabaseClient()
+      const { data: match } = await supabase
         .from('matches')
         .select('*')
         .eq('id', matchId)
@@ -499,7 +497,7 @@ class SupabaseMatchmakingService {
         characterSelection.bothReady = true
       }
 
-      await getSupabaseClient()
+      await supabase
         .from('matches')
         .update({
           character_selection: characterSelection,
@@ -513,7 +511,7 @@ class SupabaseMatchmakingService {
 
   public async banStage(matchId: string, stage: string) {
     try {
-      const { data: match } = await getSupabaseClient()
+      const { data: match } = await supabase
         .from('matches')
         .select('*')
         .eq('id', matchId)
@@ -544,7 +542,7 @@ class SupabaseMatchmakingService {
         }
       }
 
-      await getSupabaseClient()
+      await supabase
         .from('matches')
         .update({
           stage_striking: {
@@ -563,7 +561,7 @@ class SupabaseMatchmakingService {
 
   public async pickStage(matchId: string, stage: string) {
     try {
-      await getSupabaseClient()
+      await supabase
         .from('matches')
         .update({
           selected_stage: stage,
@@ -577,7 +575,7 @@ class SupabaseMatchmakingService {
 
   public async reportGameResult(matchId: string, winner: number) {
     try {
-      const { data: match } = await getSupabaseClient()
+      const { data: match } = await supabase
         .from('matches')
         .select('*')
         .eq('id', matchId)
@@ -607,7 +605,7 @@ class SupabaseMatchmakingService {
           // Check if match is complete
           const isComplete = newPlayer1Score >= 2 || newPlayer2Score >= 2
           
-          await getSupabaseClient()
+          await supabase
             .from('matches')
             .update({
               player1_score: newPlayer1Score,
@@ -642,10 +640,10 @@ class SupabaseMatchmakingService {
 
   public async sendChatMessage(matchId: string, content: string) {
     try {
-      const { data: { user } } = await getSupabaseClient().auth.getUser()
+      const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      await getSupabaseClient()
+      await supabase
         .from('match_chat_messages')
         .insert({
           match_id: matchId,
