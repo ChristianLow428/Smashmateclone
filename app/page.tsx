@@ -32,8 +32,11 @@ const mockRankings = [
 ]
 
 export default async function Home() {
-  const cookieStore = cookies()
-  const supabase = createClient(cookieStore)
+  // const cookieStore = cookies()
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
 
   const { data: tournaments, error } = await supabase
     .from('tournaments')

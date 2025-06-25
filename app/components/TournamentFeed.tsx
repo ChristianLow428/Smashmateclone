@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/utils/supabase/client'
+import { supabase } from '@/utils/supabase/client'
 import Link from 'next/link'
 
 interface Tournament {
@@ -28,7 +28,6 @@ export default function TournamentFeed() {
   useEffect(() => {
     const fetchTournaments = async () => {
       try {
-        const supabase = createClient();
         const { data, error } = await supabase
           .from('tournaments')
           .select('*')

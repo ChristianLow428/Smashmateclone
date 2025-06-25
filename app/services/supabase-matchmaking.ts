@@ -178,7 +178,7 @@ class SupabaseMatchmakingService {
       // Only try to match if we're still searching
       if (ourPlayer && ourPlayer.status === 'searching') {
         console.log('Polling: Trying to find opponents...')
-        await this.tryMatchPlayers()
+      await this.tryMatchPlayers()
       }
     } catch (error) {
       console.error('Error in polling:', error)
@@ -247,7 +247,7 @@ class SupabaseMatchmakingService {
           .single()
 
         if (currentOpponent && currentOpponent.status === 'searching') {
-          await this.createMatch(ourPlayer, opponent)
+        await this.createMatch(ourPlayer, opponent)
         } else {
           console.log('Opponent is no longer searching, skipping match creation')
         }
@@ -559,10 +559,10 @@ class SupabaseMatchmakingService {
       }
 
       console.log('Successfully joined matchmaking queue')
-
+      
       // Initialize real-time subscriptions
       await this.initializeRealtime()
-
+      
       // Start polling as a fallback mechanism
       this.startPolling()
 
@@ -570,12 +570,12 @@ class SupabaseMatchmakingService {
       setTimeout(() => {
         if (this.isSearching && !this.currentMatchId) {
           console.log('Ensuring polling is active for matchmaking')
-          if (!this.pollingInterval) {
-            this.startPolling()
-          }
+      if (!this.pollingInterval) {
+        this.startPolling()
+      }
         }
       }, 2000)
-
+      
     } catch (error) {
       console.error('Error starting search:', error)
       this.onErrorCallback?.('Failed to start search')

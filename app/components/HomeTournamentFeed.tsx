@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '../../utils/supabase/client'
+import { supabase } from '@/utils/supabase/client'
 import Link from 'next/link'
 
 interface Tournament {
@@ -28,7 +28,6 @@ export default function HomeTournamentFeed() {
   useEffect(() => {
     const fetchTournaments = async () => {
       try {
-        const supabase = createClient();
         const { data, error } = await supabase
           .from('tournaments')
           .select('*')
@@ -69,7 +68,7 @@ export default function HomeTournamentFeed() {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4">
+    <div className="space-y-4">
       {tournaments.map((tournament: Tournament) => {
         const tournamentLink = findFirstUrl(tournament.description || '');
         

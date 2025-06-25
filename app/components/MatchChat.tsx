@@ -56,7 +56,9 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
 
         const chatMessages = data.map(msg => ({
           id: msg.id,
-          sender: msg.sender_id === session?.user?.id ? session.user.name || 'You' : 'Opponent',
+          sender: session?.user && msg.sender_id === session.user.email
+            ? session.user.name || 'You'
+            : 'Opponent',
           content: msg.content,
           timestamp: new Date(msg.created_at),
           type: 'user' as const
@@ -85,7 +87,9 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
           const newMessage = payload.new
           const message: Message = {
             id: newMessage.id,
-            sender: newMessage.sender_id === session?.user?.id ? session.user.name || 'You' : 'Opponent',
+            sender: session?.user && newMessage.sender_id === session.user.email
+              ? session.user.name || 'You'
+              : 'Opponent',
             content: newMessage.content,
             timestamp: new Date(newMessage.created_at),
             type: 'user'
@@ -103,7 +107,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
         supabase.removeChannel(chatChannel.current)
       }
     }
-  }, [matchId, session?.user?.id, session?.user?.name])
+  }, [matchId, session?.user?.email, session?.user?.name])
 
   useEffect(() => {
     // Auto-scroll to bottom when new messages arrive
@@ -111,7 +115,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
   }, [messages])
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !session?.user?.id || opponentLeft) {
+    if (!newMessage.trim() || !session?.user?.email || opponentLeft) {
       return
     }
 
@@ -120,7 +124,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
         .from('match_chat_messages')
         .insert({
           match_id: matchId,
-          sender_id: session.user.id,
+          sender_id: session.user.email,
           content: newMessage.trim()
         })
 
@@ -129,7 +133,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
         return
       }
 
-      setNewMessage('')
+    setNewMessage('')
     } catch (error) {
       console.error('Error sending message:', error)
     }

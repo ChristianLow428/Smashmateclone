@@ -42,5 +42,6 @@ const getSupabaseClient = (): SupabaseClient => {
   return supabaseClient
 }
 
-// Export the client with proper typing
-export const supabase = getSupabaseClient() 
+// Export the client function and a default instance
+export const supabase = getSupabaseClient()
+export { getSupabaseClient } 

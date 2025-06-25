@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { createClient } from '@/utils/supabase/client';
+import { supabase } from '@/utils/supabase/client';
 
 interface Message {
   id: string;
@@ -15,15 +15,11 @@ export default function ChatRoom({ params }: { params: { id: string } }) {
   const { data: session } = useSession();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [supabase, setSupabase] = useState<any>(null);
 
   useEffect(() => {
     const initSupabase = async () => {
-      const client = await createClient();
-      setSupabase(client);
-
       // Subscribe to new messages
-      const channel = client
+      const channel = supabase
         .channel(`chat_room_${params.id}`)
         .on(
           'postgres_changes',
@@ -40,7 +36,7 @@ export default function ChatRoom({ params }: { params: { id: string } }) {
         .subscribe();
 
       // Load existing messages
-      const { data } = await client
+      const { data } = await supabase
         .from('messages')
         .select('*')
         .eq('chat_room_id', params.id)
@@ -60,7 +56,7 @@ export default function ChatRoom({ params }: { params: { id: string } }) {
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !supabase || !(session?.user && (session.user as { id?: string }).id)) return;
+    if (!newMessage.trim() || !(session?.user && (session.user as { id?: string }).id)) return;
 
     try {
       await supabase.from('messages').insert({

@@ -32,4 +32,5 @@ const getSupabaseServerClient = (): SupabaseClient => {
 }
 
 // Export the client with proper typing
-export const supabaseServer = getSupabaseServerClient() 
+export const supabaseServer = getSupabaseServerClient()
+export { getSupabaseServerClient, createClient } 
