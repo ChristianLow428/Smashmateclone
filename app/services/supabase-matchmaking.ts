@@ -1,4 +1,4 @@
-import { supabase } from '../utils/supabase/client'
+import { getSupabaseClient } from '../utils/supabase/client'
 import { RealtimeChannel } from '@supabase/supabase-js'
 
 export interface MatchmakingPreferences {
@@ -70,7 +70,8 @@ class SupabaseMatchmakingService {
       console.log('Initializing Supabase real-time subscriptions...')
       
       // Subscribe to matchmaking_players table for finding opponents
-      const playersChannel = supabase.channel('matchmaking_players')
+      const playersChannel = getSupabaseClient()
+        .channel('matchmaking_players')
         .on(
           'postgres_changes',
           {
@@ -136,7 +137,7 @@ class SupabaseMatchmakingService {
   private async pollForMatches() {
     try {
       // Check if we've been matched
-      const { data: ourPlayer } = await supabase
+      const { data: ourPlayer } = await getSupabaseClient()
         .from('matchmaking_players')
         .select('*')
         .eq('id', this.currentPlayerId)
@@ -173,30 +174,17 @@ class SupabaseMatchmakingService {
     if (!this.currentPlayerId) return
 
     try {
-      console.log('tryMatchPlayers: Getting our player data for ID:', this.currentPlayerId)
-      
       // Get our preferences
-      const { data: ourPlayer, error: ourPlayerError } = await supabase
+      const { data: ourPlayer } = await getSupabaseClient()
         .from('matchmaking_players')
         .select('*')
         .eq('id', this.currentPlayerId)
         .single()
 
-      if (ourPlayerError) {
-        console.error('Error getting our player data:', ourPlayerError)
-        return
-      }
-
-      if (!ourPlayer) {
-        console.log('No player data found for ID:', this.currentPlayerId)
-        return
-      }
-
-      console.log('tryMatchPlayers: Found our player data:', ourPlayer)
+      if (!ourPlayer) return
 
       // Find a compatible opponent - use a different approach for JSONB query
-      console.log('tryMatchPlayers: Searching for opponents...')
-      const { data: opponents, error } = await supabase
+      const { data: opponents, error } = await getSupabaseClient()
         .from('matchmaking_players')
         .select('*')
         .eq('status', 'searching')
@@ -208,21 +196,14 @@ class SupabaseMatchmakingService {
         return
       }
 
-      console.log('tryMatchPlayers: Found opponents:', opponents?.length || 0)
-
       // Filter by island preference in JavaScript
       const compatibleOpponents = opponents?.filter(opponent => 
         opponent.preferences?.island === ourPlayer.preferences.island
       ) || []
 
-      console.log('tryMatchPlayers: Compatible opponents:', compatibleOpponents.length)
-
       if (compatibleOpponents.length > 0) {
         const opponent = compatibleOpponents[0]
-        console.log('tryMatchPlayers: Creating match with opponent:', opponent.id)
         await this.createMatch(ourPlayer, opponent)
-      } else {
-        console.log('tryMatchPlayers: No compatible opponents found')
       }
     } catch (error) {
       console.error('Error trying to match players:', error)
@@ -233,7 +214,7 @@ class SupabaseMatchmakingService {
   private async createMatch(player1: any, player2: any) {
     try {
       // Create the match
-      const { data: match, error } = await supabase
+      const { data: match, error } = await getSupabaseClient()
         .from('matches')
         .insert({
           player1_id: player1.id,
@@ -262,7 +243,7 @@ class SupabaseMatchmakingService {
       if (error) throw error
 
       // Update both players to in_match status
-      await supabase
+      await getSupabaseClient()
         .from('matchmaking_players')
         .update({ status: 'in_match' })
         .in('id', [player1.id, player2.id])
@@ -278,7 +259,7 @@ class SupabaseMatchmakingService {
 
     try {
       // Find matches that reference our player ID directly
-      const { data: match, error } = await supabase
+      const { data: match, error } = await getSupabaseClient()
         .from('matches')
         .select('*')
         .or(`player1_id.eq.${this.currentPlayerId},player2_id.eq.${this.currentPlayerId}`)
@@ -302,7 +283,8 @@ class SupabaseMatchmakingService {
 
   private subscribeToMatch(matchId: string) {
     // Subscribe to match updates
-    this.matchChannel = supabase.channel(`match:${matchId}`)
+    this.matchChannel = getSupabaseClient()
+      .channel(`match:${matchId}`)
       .on(
         'postgres_changes',
         {
@@ -318,7 +300,8 @@ class SupabaseMatchmakingService {
       .subscribe()
 
     // Subscribe to chat messages
-    this.chatChannel = supabase.channel(`chat:${matchId}`)
+    this.chatChannel = getSupabaseClient()
+      .channel(`chat:${matchId}`)
       .on(
         'postgres_changes',
         {
@@ -380,7 +363,7 @@ class SupabaseMatchmakingService {
       console.log('Starting search with player ID:', this.currentPlayerId)
 
       // Check if already in queue
-      const { data: existingPlayer } = await supabase
+      const { data: existingPlayer } = await getSupabaseClient()
         .from('matchmaking_players')
         .select('*')
         .eq('id', this.currentPlayerId)
@@ -403,7 +386,7 @@ class SupabaseMatchmakingService {
         preferences: preferences
       })
       
-      const { data: insertData, error: insertError } = await supabase
+      const { data: insertData, error: insertError } = await getSupabaseClient()
         .from('matchmaking_players')
         .upsert({
           id: this.currentPlayerId,
@@ -444,7 +427,7 @@ class SupabaseMatchmakingService {
     try {
       this.isSearching = false
       
-      await supabase
+      await getSupabaseClient()
         .from('matchmaking_players')
         .update({ status: 'offline' })
         .eq('id', this.currentPlayerId)
@@ -465,7 +448,7 @@ class SupabaseMatchmakingService {
     try {
       // Update player status
       if (this.currentPlayerId) {
-        await supabase
+        await getSupabaseClient()
           .from('matchmaking_players')
           .update({ status: 'offline' })
           .eq('id', this.currentPlayerId)
@@ -490,7 +473,7 @@ class SupabaseMatchmakingService {
 
   public async selectCharacter(matchId: string, character: string) {
     try {
-      const { data: match } = await supabase
+      const { data: match } = await getSupabaseClient()
         .from('matches')
         .select('*')
         .eq('id', matchId)
@@ -512,7 +495,7 @@ class SupabaseMatchmakingService {
         characterSelection.bothReady = true
       }
 
-      await supabase
+      await getSupabaseClient()
         .from('matches')
         .update({
           character_selection: characterSelection,
@@ -526,7 +509,7 @@ class SupabaseMatchmakingService {
 
   public async banStage(matchId: string, stage: string) {
     try {
-      const { data: match } = await supabase
+      const { data: match } = await getSupabaseClient()
         .from('matches')
         .select('*')
         .eq('id', matchId)
@@ -557,7 +540,7 @@ class SupabaseMatchmakingService {
         }
       }
 
-      await supabase
+      await getSupabaseClient()
         .from('matches')
         .update({
           stage_striking: {
@@ -576,7 +559,7 @@ class SupabaseMatchmakingService {
 
   public async pickStage(matchId: string, stage: string) {
     try {
-      await supabase
+      await getSupabaseClient()
         .from('matches')
         .update({
           selected_stage: stage,
@@ -590,7 +573,7 @@ class SupabaseMatchmakingService {
 
   public async reportGameResult(matchId: string, winner: number) {
     try {
-      const { data: match } = await supabase
+      const { data: match } = await getSupabaseClient()
         .from('matches')
         .select('*')
         .eq('id', matchId)
@@ -620,7 +603,7 @@ class SupabaseMatchmakingService {
           // Check if match is complete
           const isComplete = newPlayer1Score >= 2 || newPlayer2Score >= 2
           
-          await supabase
+          await getSupabaseClient()
             .from('matches')
             .update({
               player1_score: newPlayer1Score,
@@ -655,10 +638,10 @@ class SupabaseMatchmakingService {
 
   public async sendChatMessage(matchId: string, content: string) {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user } } = await getSupabaseClient().auth.getUser()
       if (!user) return
 
-      await supabase
+      await getSupabaseClient()
         .from('match_chat_messages')
         .insert({
           match_id: matchId,

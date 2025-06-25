@@ -60,20 +60,15 @@ CREATE INDEX idx_match_chat_messages_match_id ON match_chat_messages(match_id);
 -- ROW LEVEL SECURITY (RLS)
 -- ========================================
 
--- Disable RLS for matchmaking tables (for now - can be re-enabled later with proper policies)
-ALTER TABLE matchmaking_players DISABLE ROW LEVEL SECURITY;
-ALTER TABLE matches DISABLE ROW LEVEL SECURITY;
-ALTER TABLE match_chat_messages DISABLE ROW LEVEL SECURITY;
-
--- Enable RLS on other tables
--- ALTER TABLE matchmaking_players ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE matches ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE match_chat_messages ENABLE ROW LEVEL SECURITY;
+-- Enable RLS on all tables
+ALTER TABLE matchmaking_players ENABLE ROW LEVEL SECURITY;
+ALTER TABLE matches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE match_chat_messages ENABLE ROW LEVEL SECURITY;
 
 -- Create permissive policies (for development - you can make these more restrictive later)
--- CREATE POLICY "Allow all operations on matchmaking_players" ON matchmaking_players FOR ALL USING (true) WITH CHECK (true);
--- CREATE POLICY "Allow all operations on matches" ON matches FOR ALL USING (true) WITH CHECK (true);
--- CREATE POLICY "Allow all operations on match_chat_messages" ON match_chat_messages FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all operations on matchmaking_players" ON matchmaking_players FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all operations on matches" ON matches FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all operations on match_chat_messages" ON match_chat_messages FOR ALL USING (true) WITH CHECK (true);
 
 -- ========================================
 -- ENABLE REALTIME
