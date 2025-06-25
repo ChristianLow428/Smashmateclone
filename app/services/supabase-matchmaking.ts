@@ -790,7 +790,7 @@ class SupabaseMatchmakingService {
         updateData.stage_striking = {
           currentPlayer: 0, // Player 1 goes first
           strikesRemaining: 1, // Player 1 bans 1 stage first
-          availableStages: ['Battlefield', 'Final Destination', 'Hollow Bastion', 'Pokemon Stadium 2', 'Small Battlefield'],
+          availableStages: ['Battlefield', 'Final Destination', 'Smashville', 'Pokemon Stadium 2', 'Town & City'],
           bannedStages: []
         }
         console.log('Both characters selected, transitioning to stage_striking with initialized data')
@@ -860,18 +860,30 @@ class SupabaseMatchmakingService {
         }
       }
 
+      const updatedStageStriking = {
+        ...stageStriking,
+        availableStages: newAvailableStages,
+        bannedStages: newBannedStages,
+        strikesRemaining: newStrikesRemaining,
+        currentPlayer: newCurrentPlayer
+      }
+
       await supabase
         .from('matches')
         .update({
-          stage_striking: {
-            ...stageStriking,
-            availableStages: newAvailableStages,
-            bannedStages: newBannedStages,
-            strikesRemaining: newStrikesRemaining,
-            currentPlayer: newCurrentPlayer
-          }
+          stage_striking: updatedStageStriking
         })
         .eq('id', matchId)
+
+      // Send status update to notify UI about stage striking changes
+      this.onMatchStatusCallback?.({
+        type: 'stage_striking_update',
+        matchId,
+        currentPlayer: newCurrentPlayer,
+        strikesRemaining: newStrikesRemaining,
+        availableStages: newAvailableStages,
+        bannedStages: newBannedStages
+      })
     } catch (error) {
       console.error('Error banning stage:', error)
     }
@@ -879,6 +891,14 @@ class SupabaseMatchmakingService {
 
   public async pickStage(matchId: string, stage: string) {
     try {
+      const { data: match } = await supabase
+        .from('matches')
+        .select('*')
+        .eq('id', matchId)
+        .single()
+
+      if (!match) return
+
       await supabase
         .from('matches')
         .update({
@@ -886,6 +906,17 @@ class SupabaseMatchmakingService {
           status: 'active'
         })
         .eq('id', matchId)
+
+      // Send status update to notify UI about stage selection and game start
+      this.onMatchStatusCallback?.({
+        type: 'match_state',
+        matchId,
+        status: 'active',
+        selectedStage: stage,
+        currentGame: match.current_game,
+        player1Score: match.player1_score,
+        player2Score: match.player2_score
+      })
     } catch (error) {
       console.error('Error picking stage:', error)
     }
@@ -922,17 +953,105 @@ class SupabaseMatchmakingService {
           
           // Check if match is complete
           const isComplete = newPlayer1Score >= 2 || newPlayer2Score >= 2
+          const newCurrentGame = isComplete ? match.current_game : match.current_game + 1
+          const newStatus = isComplete ? 'completed' : 'stage_striking'
           
-          await supabase
+          // Update the match in the database
+          const { data: updatedMatch, error } = await supabase
             .from('matches')
             .update({
               player1_score: newPlayer1Score,
               player2_score: newPlayer2Score,
-              status: isComplete ? 'completed' : 'stage_striking',
-              current_game: isComplete ? match.current_game : match.current_game + 1,
+              status: newStatus,
+              current_game: newCurrentGame,
               game_result_validation: { player1Reported: null, player2Reported: null, bothReported: false }
             })
             .eq('id', matchId)
+            .select()
+            .single()
+
+          if (error) {
+            console.error('Error updating match after game result:', error)
+            return
+          }
+
+          if (updatedMatch) {
+            // If transitioning to next game, initialize stage striking
+            if (!isComplete) {
+              // Determine stage pool and striking rules for next game
+              const STARTER_STAGES = ['Battlefield', 'Final Destination', 'Smashville', 'Pokemon Stadium 2', 'Town & City']
+              const COUNTERPICK_STAGES = ['Kalos Pokemon League', 'Lylat Cruise', 'Unova Pokemon League', 'Yoshi\'s Story']
+              const ALL_STAGES = [...STARTER_STAGES, ...COUNTERPICK_STAGES]
+              
+              const stagePool = newCurrentGame === 1 ? STARTER_STAGES : ALL_STAGES
+              let firstPlayer: number
+              let strikesRemaining: number
+              
+              if (newCurrentGame === 1) {
+                // Game 1: Player 1 always goes first and bans 1 stage
+                firstPlayer = 0
+                strikesRemaining = 1
+              } else {
+                // Counterpicks: Winner bans 2 stages, loser picks
+                const winner = newPlayer1Score > newPlayer2Score ? 0 : 1
+                firstPlayer = winner
+                strikesRemaining = 2
+              }
+              
+              // Initialize stage striking for next game
+              const stageStriking = {
+                currentPlayer: firstPlayer,
+                strikesRemaining: strikesRemaining,
+                availableStages: [...stagePool],
+                bannedStages: []
+              }
+              
+              // Update the match with stage striking data
+              await supabase
+                .from('matches')
+                .update({
+                  stage_striking: stageStriking
+                })
+                .eq('id', matchId)
+              
+              // Trigger match status update with stage striking info
+              this.onMatchStatusCallback?.({
+                type: 'match_state',
+                matchId,
+                status: newStatus,
+                currentGame: newCurrentGame,
+                player1Score: newPlayer1Score,
+                player2Score: newPlayer2Score,
+                currentPlayer: stageStriking.currentPlayer,
+                strikesRemaining: stageStriking.strikesRemaining,
+                availableStages: stageStriking.availableStages
+              })
+            } else {
+              // Match is complete, just send the status update
+              this.onMatchStatusCallback?.({
+                type: 'match_state',
+                matchId,
+                status: newStatus,
+                currentGame: newCurrentGame,
+                player1Score: newPlayer1Score,
+                player2Score: newPlayer2Score
+              })
+            }
+
+            // If match is complete, send match complete notification
+            if (isComplete) {
+              const finalWinner = newPlayer1Score >= 2 ? 0 : 1
+              this.onMatchStatusCallback?.({
+                type: 'match_complete',
+                matchId,
+                winner: finalWinner,
+                finalScore: {
+                  player1: newPlayer1Score,
+                  player2: newPlayer2Score
+                }
+              })
+            }
+          }
         } else {
           // Conflict detected
           this.onMatchStatusCallback?.({
@@ -943,7 +1062,15 @@ class SupabaseMatchmakingService {
           })
         }
       } else {
-        // Only one player reported
+        // Only one player reported - update the database with current validation state
+        await supabase
+          .from('matches')
+          .update({
+            game_result_validation: gameResultValidation
+          })
+          .eq('id', matchId)
+
+        // Notify about pending result
         this.onMatchStatusCallback?.({
           type: 'game_result_pending',
           matchId,
