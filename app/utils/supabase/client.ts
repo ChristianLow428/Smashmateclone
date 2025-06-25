@@ -5,41 +5,41 @@ let supabaseClient: SupabaseClient | null = null
 
 const getSupabaseClient = (): SupabaseClient => {
   if (!supabaseClient) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-    // Validate environment variables
-    if (!supabaseUrl) {
-      console.error('NEXT_PUBLIC_SUPABASE_URL is not defined')
-      throw new Error('NEXT_PUBLIC_SUPABASE_URL is not defined')
-    }
+// Validate environment variables
+if (!supabaseUrl) {
+  console.error('NEXT_PUBLIC_SUPABASE_URL is not defined')
+  throw new Error('NEXT_PUBLIC_SUPABASE_URL is not defined')
+}
 
-    if (!supabaseAnonKey) {
-      console.error('NEXT_PUBLIC_SUPABASE_ANON_KEY is not defined')
-      throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY is not defined')
-    }
+if (!supabaseAnonKey) {
+  console.error('NEXT_PUBLIC_SUPABASE_ANON_KEY is not defined')
+  throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY is not defined')
+}
 
     console.log('Initializing Supabase client with URL:', supabaseUrl)
     
     supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
       },
       realtime: {
         params: {
           eventsPerSecond: 10
         }
-      }
-    })
+  }
+})
 
-    // Test the connection
+// Test the connection
     supabaseClient.auth.getSession().then(({ data, error }: { data: any; error: any }) => {
-      if (error) {
-        console.error('Supabase auth error:', error)
-      } else {
-        console.log('Supabase client initialized successfully')
+  if (error) {
+    console.error('Supabase auth error:', error)
+  } else {
+    console.log('Supabase client initialized successfully')
         
         // Test real-time connection
         const testChannel = supabaseClient!.channel('test-realtime')
@@ -51,7 +51,7 @@ const getSupabaseClient = (): SupabaseClient => {
           } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
             console.warn('Real-time may not be properly configured')
             supabaseClient!.removeChannel(testChannel)
-          }
+  }
         })
       }
     })

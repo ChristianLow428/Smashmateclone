@@ -85,7 +85,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
       setIsConnected(true)
       
       pollingInterval.current = setInterval(async () => {
-        try {
+      try {
           const { data, error } = await supabase
             .from('match_chat_messages')
             .select('*')
@@ -142,7 +142,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
             console.log('Real-time test timeout, using polling')
             supabase.removeChannel(testChannel)
             startPolling()
-          }
+        }
         }, 3000)
 
       } catch (error) {
@@ -196,14 +196,14 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
               }, 1000)
             } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
               console.error(`Chat subscription failed with status: ${status}, falling back to polling`)
-              setIsConnected(false)
+      setIsConnected(false)
               setUsePolling(true)
               startPolling()
-            }
+    }
           })
       } catch (error) {
         console.error('Error setting up actual chat subscription:', error)
-        setIsConnected(false)
+      setIsConnected(false)
         startPolling()
       }
     }
@@ -306,8 +306,8 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch }: MatchChat
           >
             Test
           </button>
-          <div className="flex items-center space-x-1">
-            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
+        <div className="flex items-center space-x-1">
+          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
             <span className="text-xs">
               {isConnected ? (usePolling ? 'Polling' : 'Connected') : 'Disconnected'}
             </span>

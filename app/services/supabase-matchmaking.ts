@@ -326,10 +326,10 @@ class SupabaseMatchmakingService {
       if (error) {
         console.error('Error creating match:', error)
         // Reset both players back to searching
-        await supabase
-          .from('matchmaking_players')
+      await supabase
+        .from('matchmaking_players')
           .update({ status: 'searching' })
-          .in('id', [player1.id, player2.id])
+        .in('id', [player1.id, player2.id])
         return
       }
 
@@ -856,10 +856,10 @@ class SupabaseMatchmakingService {
         // Determine next phase based on current game
         if (match.current_game === 1) {
           // Game 1: Player 1 bans 1, Player 2 bans 2, Player 1 picks
-          if (newCurrentPlayer === 0) {
-            newCurrentPlayer = 1
-            newStrikesRemaining = 2 // Player 2 bans 2 stages
-          } else {
+        if (newCurrentPlayer === 0) {
+          newCurrentPlayer = 1
+          newStrikesRemaining = 2 // Player 2 bans 2 stages
+        } else {
             // Player 2 finished banning, now Player 1 picks
             newCurrentPlayer = 0
             newStrikesRemaining = 0 // No more strikes, just pick
@@ -878,12 +878,12 @@ class SupabaseMatchmakingService {
       }
 
       const updatedStageStriking = {
-        ...stageStriking,
-        availableStages: newAvailableStages,
-        bannedStages: newBannedStages,
-        strikesRemaining: newStrikesRemaining,
-        currentPlayer: newCurrentPlayer
-      }
+            ...stageStriking,
+            availableStages: newAvailableStages,
+            bannedStages: newBannedStages,
+            strikesRemaining: newStrikesRemaining,
+            currentPlayer: newCurrentPlayer
+          }
 
       await supabase
         .from('matches')
@@ -1030,8 +1030,8 @@ class SupabaseMatchmakingService {
                 strikesRemaining = 1
               } else {
                 // Counterpicks: Winner of the last game bans 2 stages, loser picks
-                // Use the old scores to determine who won the last game
-                const lastGameWinner = match.player1_score > match.player2_score ? 0 : 1
+                // Use the winner of the current game to determine who bans
+                const lastGameWinner = winner
                 firstPlayer = lastGameWinner
                 strikesRemaining = 2
               }
