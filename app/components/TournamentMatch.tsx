@@ -113,6 +113,15 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
         if (matchStatus.status && ['character_selection', 'stage_striking', 'active', 'completed'].includes(matchStatus.status)) {
           setMatchStatusState(matchStatus.status as MatchStatus)
           console.log(`Match status changed to: ${matchStatus.status}`)
+          
+          // Clear game result validation state when transitioning to a new game
+          if (matchStatus.status === 'stage_striking' || matchStatus.status === 'active') {
+            setGameResultPending(false)
+            setGameResultConflict(false)
+            setPendingResult(null)
+            setConflictResult(null)
+            console.log('Cleared game result validation state for new game')
+          }
         }
         if (matchStatus.selectedStage) setSelectedStage(matchStatus.selectedStage)
         if (matchStatus.currentGame) setCurrentGame(matchStatus.currentGame)
