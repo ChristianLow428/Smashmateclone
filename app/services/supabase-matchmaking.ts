@@ -112,7 +112,7 @@ class SupabaseMatchmakingService {
           console.log('Realtime subscription timeout, starting polling fallback')
           this.startPolling()
         }
-      }, 5000) // 5 second timeout
+      }, 3000) // Reduced timeout to 3 seconds
       
     } catch (error) {
       console.error('Error initializing realtime:', error)
@@ -364,7 +364,7 @@ class SupabaseMatchmakingService {
       this.isSearching = true
       console.log('Starting search with player ID:', this.currentPlayerId)
 
-      // Check if already in queue
+      // Check if already in queue or match
       const { data: existingPlayer } = await supabase
         .from('matchmaking_players')
         .select('*')
@@ -376,8 +376,10 @@ class SupabaseMatchmakingService {
           console.log('Already searching for match')
           return
         } else if (existingPlayer.status === 'in_match') {
-          console.log('Already in a match')
-          throw new Error('Already in a match')
+          console.log('Already in a match, trying to find existing match')
+          // Try to find the existing match instead of throwing an error
+          await this.findOurMatch()
+          return
         }
       }
 
@@ -415,10 +417,10 @@ class SupabaseMatchmakingService {
       if (!this.pollingInterval) {
         this.startPolling()
       }
-      
     } catch (error) {
       console.error('Error starting search:', error)
-      this.onErrorCallback?.(error instanceof Error ? error.message : 'Failed to start search')
+      this.isSearching = false
+      this.currentPlayerId = null
       throw error
     }
   }
@@ -668,18 +670,53 @@ class SupabaseMatchmakingService {
     this.onErrorCallback = callback
   }
 
-  public disconnect() {
-    this.matchChannel?.unsubscribe()
-    this.chatChannel?.unsubscribe()
-    this.currentPlayerId = null
-    this.currentMatchId = null
-    this.isSearching = false
+  public async resetPlayerStatus() {
+    if (!this.currentPlayerId) return
+
+    try {
+      console.log('Resetting player status for:', this.currentPlayerId)
+      
+      // Update player status to offline
+      await supabase
+        .from('matchmaking_players')
+        .update({ status: 'offline' })
+        .eq('id', this.currentPlayerId)
+
+      // Clean up any existing subscriptions
+      this.disconnect()
+      
+      console.log('Player status reset successfully')
+    } catch (error) {
+      console.error('Error resetting player status:', error)
+    }
+  }
+
+  public async disconnect() {
+    console.log('Disconnecting Supabase matchmaking service')
+    
+    // Clean up real-time subscriptions
+    if (this.matchChannel) {
+      this.matchChannel.unsubscribe()
+      this.matchChannel = null
+    }
+    
+    if (this.chatChannel) {
+      this.chatChannel.unsubscribe()
+      this.chatChannel = null
+    }
     
     // Stop polling
     if (this.pollingInterval) {
       clearInterval(this.pollingInterval)
       this.pollingInterval = null
     }
+    
+    // Reset state
+    this.currentPlayerId = null
+    this.currentMatchId = null
+    this.isSearching = false
+    
+    console.log('Supabase matchmaking service disconnected')
   }
 }
 

@@ -59,7 +59,8 @@ export default function FreeBattle() {
     pickStage,
     reportGameResult,
     sendChatMessage,
-    useWebSocket
+    useWebSocket,
+    resetPlayerStatus
   } = useUnifiedMatchmaking()
 
   useEffect(() => {
@@ -93,7 +94,7 @@ export default function FreeBattle() {
     }
   }, [matchStatus, useWebSocket])
 
-  const handleStartSearch = () => {
+  const handleStartSearch = async () => {
     console.log('Starting search with preferences:', preferences)
     console.log('Session data:', session)
     
@@ -110,7 +111,27 @@ export default function FreeBattle() {
     
     setOpponent(null)
     setPlayerIndex(null)
-    startSearch(preferences, userId)
+    
+    try {
+      await startSearch(preferences, userId)
+    } catch (error) {
+      console.error('Error starting search:', error)
+      if (error instanceof Error && error.message.includes('Already in a match')) {
+        // Show a dialog asking if they want to reset their status
+        const confirmed = window.confirm(
+          'You are already in a match. Would you like to reset your status and start a new search?'
+        )
+        if (confirmed) {
+          try {
+            await resetPlayerStatus()
+            // Try starting search again after reset
+            await startSearch(preferences, userId)
+          } catch (resetError) {
+            console.error('Error after reset:', resetError)
+          }
+        }
+      }
+    }
   }
 
   const handleCancelSearch = () => {

@@ -150,6 +150,20 @@ export function useUnifiedMatchmaking() {
     }
   }, [useWebSocket])
 
+  const resetPlayerStatus = useCallback(async () => {
+    if (useWebSocket) {
+      const { matchmakingService } = await import('../services/matchmaking')
+      // WebSocket service might not have resetPlayerStatus, so we'll just reset local state
+      console.log('Resetting player status for WebSocket service')
+    } else {
+      await supabaseMatchmakingService.resetPlayerStatus()
+    }
+    setCurrentMatch(null)
+    setMatchStatus(null)
+    setError(null)
+    setIsSearching(false)
+  }, [useWebSocket])
+
   const sendChatMessage = useCallback(async (matchId: string, content: string) => {
     if (useWebSocket) {
       // WebSocket chat is handled through the WebSocket
@@ -171,6 +185,7 @@ export function useUnifiedMatchmaking() {
     banStage,
     pickStage,
     reportGameResult,
+    resetPlayerStatus,
     sendChatMessage,
     useWebSocket // Expose this for debugging
   }
