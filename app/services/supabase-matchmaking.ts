@@ -1054,12 +1054,18 @@ class SupabaseMatchmakingService {
               })
               
               // Update the match with stage striking data
-              await supabase
+              const { error: updateError } = await supabase
                 .from('matches')
                 .update({
                   stage_striking: stageStriking
                 })
                 .eq('id', matchId)
+              
+              if (updateError) {
+                console.error('Error updating stage striking in database:', updateError)
+              } else {
+                console.log('Successfully updated stage striking in database:', stageStriking)
+              }
               
               // Trigger match status update with stage striking info
               this.onMatchStatusCallback?.({
@@ -1069,6 +1075,13 @@ class SupabaseMatchmakingService {
                 currentGame: newCurrentGame,
                 player1Score: newPlayer1Score,
                 player2Score: newPlayer2Score,
+                currentPlayer: stageStriking.currentPlayer,
+                strikesRemaining: stageStriking.strikesRemaining,
+                availableStages: stageStriking.availableStages,
+                bannedStages: stageStriking.bannedStages
+              })
+              
+              console.log('Sent match status update with stage striking:', {
                 currentPlayer: stageStriking.currentPlayer,
                 strikesRemaining: stageStriking.strikesRemaining,
                 availableStages: stageStriking.availableStages,
