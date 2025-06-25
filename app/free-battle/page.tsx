@@ -64,9 +64,11 @@ export default function FreeBattle() {
   } = useUnifiedMatchmaking()
 
   useEffect(() => {
-    // Handle match status updates
     if (matchStatus) {
       console.log('Match status update:', matchStatus)
+      console.log('Current opponent state:', opponent)
+      console.log('Current player index state:', playerIndex)
+      console.log('Current match state:', currentMatch)
       
       // Handle WebSocket match messages
       if (useWebSocket && matchStatus.type === 'match' && matchStatus.status === 'character_selection') {
@@ -84,6 +86,15 @@ export default function FreeBattle() {
         console.log('Opponent:', matchStatus.opponent)
         console.log('Player index:', matchStatus.playerIndex)
       }
+      // Handle match state updates (for reconnecting to existing matches)
+      else if (matchStatus.type === 'match_state' && matchStatus.opponent) {
+        setOpponent(matchStatus.opponent)
+        setPlayerIndex(matchStatus.playerIndex)
+        console.log('Reconnecting to existing match:')
+        console.log('Opponent:', matchStatus.opponent)
+        console.log('Player index:', matchStatus.playerIndex)
+        console.log('Match status:', matchStatus.status)
+      }
       else if (matchStatus.type === 'match_state' && matchStatus.status === 'stage_striking') {
         console.log('Stage striking phase started')
       } else if (matchStatus.type === 'match_state' && matchStatus.status === 'active') {
@@ -92,7 +103,7 @@ export default function FreeBattle() {
         console.log('Match completed')
       }
     }
-  }, [matchStatus, useWebSocket])
+  }, [matchStatus, useWebSocket, opponent, playerIndex, currentMatch])
 
   const handleStartSearch = async () => {
     console.log('Starting search with preferences:', preferences)

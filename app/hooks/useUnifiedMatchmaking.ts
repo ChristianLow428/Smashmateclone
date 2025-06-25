@@ -57,23 +57,29 @@ export function useUnifiedMatchmaking() {
   }, [])
 
   const setupSupabaseCallbacks = () => {
-      supabaseMatchmakingService.onMatch((matchId) => {
-        console.log('Supabase: Match found:', matchId)
-        setCurrentMatch(matchId)
-        setIsSearching(false)
-      })
+    supabaseMatchmakingService.onMatch((matchId) => {
+      console.log('Supabase: Match found:', matchId)
+      setCurrentMatch(matchId)
+      setIsSearching(false)
+    })
 
-      supabaseMatchmakingService.onMatchStatus((status) => {
-        console.log('Supabase: Match status update:', status)
-        setMatchStatus(status)
-      })
+    supabaseMatchmakingService.onMatchStatus((status) => {
+      console.log('Supabase: Match status update:', status)
+      setMatchStatus(status)
+      
+      // Handle opponent information when reconnecting to existing match
+      if (status.type === 'match_state' && status.opponent) {
+        console.log('Setting opponent from match status:', status.opponent)
+        // The opponent info will be handled by the page component
+      }
+    })
 
-      supabaseMatchmakingService.onError((error) => {
-        console.error('Supabase: Matchmaking error:', error)
-        setError(error)
-        setIsSearching(false)
-      })
-    }
+    supabaseMatchmakingService.onError((error) => {
+      console.error('Supabase: Matchmaking error:', error)
+      setError(error)
+      setIsSearching(false)
+    })
+  }
 
   const startSearch = useCallback(async (preferences: MatchmakingPreferences, userId?: string) => {
     setError(null)
