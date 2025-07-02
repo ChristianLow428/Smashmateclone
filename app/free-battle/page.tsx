@@ -47,6 +47,15 @@ export default function FreeBattle() {
     }
   })
 
+  // Debug session state
+  useEffect(() => {
+    console.log('FreeBattle: Session status changed:', {
+      status,
+      session: session ? 'exists' : 'null',
+      user: session?.user ? 'exists' : 'null'
+    })
+  }, [session, status])
+
   const {
     isSearching,
     currentMatch,
@@ -122,6 +131,25 @@ export default function FreeBattle() {
     }
   }, [currentMatch])
 
+  // Monitor modal state changes and session
+  useEffect(() => {
+    const hasModal = (currentMatch && opponent) || (matchEnded && opponent)
+    console.log('Modal state changed:', {
+      hasModal,
+      currentMatch,
+      opponent: !!opponent,
+      matchEnded,
+      sessionStatus: status,
+      sessionExists: !!session
+    })
+  }, [currentMatch, opponent, matchEnded, status, session])
+
+  // Prevent showing login overlay if session is temporarily lost during modal transition
+  const shouldShowLoginOverlay = status === 'unauthenticated' || (status === 'loading' && !session)
+  
+  // Only disable if truly unauthenticated, not during loading or temporary session loss
+  const isDisabled = status === 'unauthenticated'
+
   const handleStartSearch = async () => {
     console.log('Starting search with preferences:', preferences)
     console.log('Session data:', session)
@@ -172,20 +200,32 @@ export default function FreeBattle() {
       return
     }
     
-    if (currentMatch) {
-      console.log('Leaving match:', currentMatch)
-      await leaveMatch(currentMatch)
+    console.log('handleLeaveMatch: Starting leave process')
+    console.log('handleLeaveMatch: Session status:', status)
+    console.log('handleLeaveMatch: Session exists:', !!session)
+    
+    try {
+      if (currentMatch) {
+        console.log('Leaving match:', currentMatch)
+        await leaveMatch(currentMatch)
+      }
+      
+      // Clear local state immediately
+      setOpponent(null)
+      setPlayerIndex(null)
+      setMatchEnded(true)
+      
+      console.log('Match left, state cleared')
+      console.log('handleLeaveMatch: Session status after leave:', status)
+      console.log('handleLeaveMatch: Session exists after leave:', !!session)
+    } catch (error) {
+      console.error('Error leaving match:', error)
+      // Even if there's an error, clear the local state
+      setOpponent(null)
+      setPlayerIndex(null)
+      setMatchEnded(true)
     }
-    
-    // Clear local state immediately
-    setOpponent(null)
-    setPlayerIndex(null)
-    setMatchEnded(true)
-    
-    console.log('Match left, state cleared')
   }
-
-  const isDisabled = !session;
 
   if (status === 'loading') {
     return (
@@ -213,7 +253,7 @@ export default function FreeBattle() {
           <span className="text-gray-500 text-sm mt-2">Hawaii Smash Ultimate Ruleset</span>
         </div>
         {/* Overlay if not logged in */}
-        {isDisabled && (
+        {shouldShowLoginOverlay && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-gray-200 bg-opacity-80 backdrop-blur-sm rounded-lg">
             <div className="bg-red-600 text-white px-6 py-3 rounded-lg text-lg font-bold mb-4 shadow-lg">
               Need to login to play

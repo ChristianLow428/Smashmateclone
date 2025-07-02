@@ -17,3 +17,25 @@ body {
   )
   rgb(var(--background-start-rgb));
 } 
+
+/* Mobile scrolling improvements */
+@layer utilities {
+  .overscroll-contain {
+    overscroll-behavior: contain;
+  }
+  
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+  
+  /* Improve scrolling on iOS */
+  .scroll-smooth-ios {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Prevent scroll chaining on mobile */
+  .prevent-scroll-chain {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+} 

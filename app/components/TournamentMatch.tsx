@@ -322,13 +322,13 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
         </div>
         
         {/* Character Grid */}
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 max-h-96 overflow-y-auto mb-4">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 max-h-64 sm:max-h-80 md:max-h-96 overflow-y-auto mb-4 overscroll-contain">
           {filteredCharacters.length > 0 ? (
             filteredCharacters.map((character) => (
               <button
                 key={character}
                 onClick={() => handleCharacterSelect(character)}
-                className={`p-2 text-xs sm:text-sm border rounded ${
+                className={`p-2 text-xs sm:text-sm border rounded touch-manipulation ${
                   selectedCharacter === character
                     ? 'bg-blue-500 text-white border-blue-500'
                     : 'bg-gray-50 hover:bg-gray-100 border-gray-300'
@@ -683,10 +683,10 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
   )
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
-      <div className="bg-gray-100 rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] overflow-y-auto p-4 md:p-6">
-        {/* Header */}
-        <div className="bg-blue-600 text-white p-3 md:p-4 rounded-t-lg flex flex-col md:flex-row md:justify-between md:items-center mb-4 space-y-2 md:space-y-0">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-2 overflow-y-auto prevent-scroll-chain">
+      <div className="bg-gray-100 rounded-lg shadow-xl w-full max-w-4xl min-h-fit my-4">
+        {/* Header - Fixed at top */}
+        <div className="bg-blue-600 text-white p-3 md:p-4 rounded-t-lg flex flex-col md:flex-row md:justify-between md:items-center space-y-2 md:space-y-0 sticky top-0 z-10">
           <div>
             <h2 className="text-lg font-semibold">Tournament Match</h2>
             <p className="text-sm opacity-90">
@@ -717,27 +717,30 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-4">
+        {/* Scrollable Content */}
+        <div className="p-4 md:p-6 overflow-y-auto max-h-[calc(100vh-8rem)] scroll-smooth-ios">
+          <div className="flex flex-col lg:flex-row gap-4">
           {/* Main Content */}
-          <div className="flex-1 order-2 lg:order-1">
+            <div className="flex-1 order-2 lg:order-1">
             {matchStatusState === 'character_selection' && renderCharacterSelection()}
             {matchStatusState === 'stage_striking' && renderStageStriking()}
             {matchStatusState === 'active' && renderGameActive()}
             {matchStatusState === 'completed' && renderMatchComplete()}
-            {matchEnded && renderMatchEnded()}
+              {matchEnded && renderMatchEnded()}
           </div>
 
           {/* Chat Sidebar */}
           {showChat && (
-            <div className="w-full lg:w-80 order-1 lg:order-2">
+              <div className="w-full lg:w-80 order-1 lg:order-2">
               <MatchChat
                 matchId={matchId}
                 opponent={opponent}
                 onLeaveMatch={onLeaveMatch}
-                opponentLeft={opponentLeft}
+                  opponentLeft={opponentLeft}
               />
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>

@@ -385,7 +385,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
       </div>
 
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto p-2 md:p-3 space-y-2 min-h-0">
+      <div className="flex-1 overflow-y-auto p-2 md:p-3 space-y-2 min-h-0 overscroll-contain scroll-smooth-ios">
         {opponentLeft && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-2 md:p-3 mb-3">
             <div className="flex items-center space-x-2">
