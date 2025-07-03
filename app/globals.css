@@ -38,4 +38,17 @@ body {
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
   }
+  
+  /* Modal scrolling improvements */
+  .modal-scroll-container {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    scroll-behavior: smooth;
+  }
+  
+  /* Ensure proper height for modal content */
+  .modal-content {
+    min-height: 0;
+    flex: 1;
+  }
 } 

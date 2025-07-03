@@ -322,7 +322,7 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
         </div>
         
         {/* Character Grid */}
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 max-h-64 sm:max-h-80 md:max-h-96 overflow-y-auto mb-4 overscroll-contain">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 max-h-48 sm:max-h-64 md:max-h-80 overflow-y-auto mb-4 overscroll-contain scroll-smooth-ios">
           {filteredCharacters.length > 0 ? (
             filteredCharacters.map((character) => (
               <button
@@ -683,63 +683,65 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
   )
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-2 overflow-y-auto prevent-scroll-chain">
-      <div className="bg-gray-100 rounded-lg shadow-xl w-full max-w-4xl min-h-fit my-4">
-        {/* Header - Fixed at top */}
-        <div className="bg-blue-600 text-white p-3 md:p-4 rounded-t-lg flex flex-col md:flex-row md:justify-between md:items-center space-y-2 md:space-y-0 sticky top-0 z-10">
-          <div>
-            <h2 className="text-lg font-semibold">Tournament Match</h2>
-            <p className="text-sm opacity-90">
-              Opponent from {opponent.preferences.island} ({opponent.preferences.connection})
-            </p>
-            {playerIndex !== null && (
-              <p className="text-sm opacity-90 mt-1">
-                You are <span className="font-semibold">Player {playerIndex + 1}</span>
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto modal-scroll-container">
+      <div className="min-h-screen flex items-start justify-center p-2">
+        <div className="bg-gray-100 rounded-lg shadow-xl w-full max-w-4xl my-4 modal-content">
+          {/* Header - Fixed at top */}
+          <div className="bg-blue-600 text-white p-3 md:p-4 rounded-t-lg flex flex-col md:flex-row md:justify-between md:items-center space-y-2 md:space-y-0 sticky top-0 z-10">
+            <div>
+              <h2 className="text-lg font-semibold">Tournament Match</h2>
+              <p className="text-sm opacity-90">
+                Opponent from {opponent.preferences.island} ({opponent.preferences.connection})
               </p>
-            )}
-          </div>
-          <div className="flex items-center space-x-2 md:space-x-4">
-            <button
-              onClick={() => {
-                if (!opponentLeft && matchStatusState !== 'completed') setShowChat(!showChat)
-              }}
-              className={`px-2 py-1 md:px-3 md:py-1 bg-blue-500 text-white rounded text-xs md:text-sm hover:bg-blue-600 ${opponentLeft || matchStatusState === 'completed' ? 'opacity-50 cursor-not-allowed' : ''}`}
-              disabled={opponentLeft || matchStatusState === 'completed'}
-            >
-              {showChat ? 'Hide Chat' : 'Show Chat'}
-            </button>
-            <button
-              onClick={onLeaveMatch}
-              className="px-2 py-1 md:px-3 md:py-1 bg-red-500 text-white rounded text-xs md:text-sm hover:bg-red-600"
-            >
-              Leave Match
-            </button>
-          </div>
-        </div>
-
-        {/* Scrollable Content */}
-        <div className="p-4 md:p-6 overflow-y-auto max-h-[calc(100vh-8rem)] scroll-smooth-ios">
-          <div className="flex flex-col lg:flex-row gap-4">
-          {/* Main Content */}
-            <div className="flex-1 order-2 lg:order-1">
-            {matchStatusState === 'character_selection' && renderCharacterSelection()}
-            {matchStatusState === 'stage_striking' && renderStageStriking()}
-            {matchStatusState === 'active' && renderGameActive()}
-            {matchStatusState === 'completed' && renderMatchComplete()}
-              {matchEnded && renderMatchEnded()}
-          </div>
-
-          {/* Chat Sidebar */}
-          {showChat && (
-              <div className="w-full lg:w-80 order-1 lg:order-2">
-              <MatchChat
-                matchId={matchId}
-                opponent={opponent}
-                onLeaveMatch={onLeaveMatch}
-                  opponentLeft={opponentLeft}
-              />
+              {playerIndex !== null && (
+                <p className="text-sm opacity-90 mt-1">
+                  You are <span className="font-semibold">Player {playerIndex + 1}</span>
+                </p>
+              )}
             </div>
-          )}
+            <div className="flex items-center space-x-2 md:space-x-4">
+              <button
+                onClick={() => {
+                  if (!opponentLeft && matchStatusState !== 'completed') setShowChat(!showChat)
+                }}
+                className={`px-2 py-1 md:px-3 md:py-1 bg-blue-500 text-white rounded text-xs md:text-sm hover:bg-blue-600 ${opponentLeft || matchStatusState === 'completed' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={opponentLeft || matchStatusState === 'completed'}
+              >
+                {showChat ? 'Hide Chat' : 'Show Chat'}
+              </button>
+              <button
+                onClick={onLeaveMatch}
+                className="px-2 py-1 md:px-3 md:py-1 bg-red-500 text-white rounded text-xs md:text-sm hover:bg-red-600"
+              >
+                Leave Match
+              </button>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="p-4 md:p-6">
+            <div className="flex flex-col lg:flex-row gap-4">
+              {/* Main Content */}
+              <div className="flex-1 order-2 lg:order-1">
+                {matchStatusState === 'character_selection' && renderCharacterSelection()}
+                {matchStatusState === 'stage_striking' && renderStageStriking()}
+                {matchStatusState === 'active' && renderGameActive()}
+                {matchStatusState === 'completed' && renderMatchComplete()}
+                {matchEnded && renderMatchEnded()}
+              </div>
+
+              {/* Chat Sidebar */}
+              {showChat && (
+                <div className="w-full lg:w-80 order-1 lg:order-2">
+                  <MatchChat
+                    matchId={matchId}
+                    opponent={opponent}
+                    onLeaveMatch={onLeaveMatch}
+                    opponentLeft={opponentLeft}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
