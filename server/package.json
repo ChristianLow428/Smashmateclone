@@ -1,7 +1,7 @@
 {
-  "name": "smashmate-websocket-server",
+  "name": "hawaiissbu-websocket-server",
   "version": "1.0.0",
-  "description": "WebSocket server for Smashmate matchmaking",
+  "description": "WebSocket server for HawaiiSSBU matchmaking",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",

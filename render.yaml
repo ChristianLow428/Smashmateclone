@@ -1,0 +1,31 @@
+services:
+  # WebSocket Server
+  - type: web
+    name: hawaiissbu-websocket-server
+    env: node
+    rootDir: server
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+    healthCheckPath: /
+    autoDeploy: true
+
+  # Next.js Frontend
+  - type: web
+    name: hawaiissbu-frontend
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: NEXT_PUBLIC_WEBSOCKET_URL
+        value: wss://hawaiissbu-websocket-server.onrender.com
+    healthCheckPath: /
+    autoDeploy: true 

@@ -82,12 +82,23 @@ class MatchmakingServer {
   private chatConnections: Map<string, ServerWebSocket[]> = new Map()
 
   constructor(port: number) {
-    const server = createServer()
+    const server = createServer((req, res) => {
+      // Health check endpoint for Render
+      if (req.url === '/' && req.method === 'GET') {
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ status: 'ok', message: 'HawaiiSSBU WebSocket Server is running' }))
+        return
+      }
+      
+      res.writeHead(404)
+      res.end()
+    })
+    
     this.wss = new WebSocketServer({ server })
 
     this.wss.on('connection', this.handleConnection.bind(this))
     server.listen(port, () => {
-      console.log(`Matchmaking server running on port ${port}`)
+      console.log(`HawaiiSSBU matchmaking server running on port ${port}`)
     })
   }
 
@@ -869,4 +880,5 @@ class MatchmakingServer {
 }
 
 // Start the server
-new MatchmakingServer(3001) 
+const port = process.env.PORT || 3001
+new MatchmakingServer(parseInt(port.toString())) 

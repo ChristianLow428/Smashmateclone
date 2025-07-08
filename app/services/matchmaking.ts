@@ -80,7 +80,7 @@ class MatchmakingService {
     // In production, use environment variable or default to a deployed WebSocket server
     const wsUrl = process.env.NODE_ENV === 'development' 
       ? 'ws://localhost:3001'
-      : process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'wss://your-websocket-server-url.com'
+      : process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'wss://hawaiissbu-websocket-server.onrender.com'
 
     console.log('Attempting to connect to WebSocket server at:', wsUrl)
     this.isConnecting = true

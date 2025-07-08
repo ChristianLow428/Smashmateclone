@@ -1,11 +1,35 @@
-# Smashmateclone
+# HawaiiSSBU
 
-Updated rankings system with Discord bot integration.
+A real-time Super Smash Bros Ultimate matchmaking platform for the Hawaii gaming community.
 
-Trigger redeploy for Vercel environment variable update.
+## Features
 
-Fix NEXTAUTH_URL for smashmateclonev2.vercel.app domain.
+- **Real-time Matchmaking**: Find opponents instantly with WebSocket-powered matchmaking
+- **Tournament-style Matches**: Character selection, stage striking, and best-of-3 format
+- **Live Chat**: Communicate with opponents during matches
+- **Hawaii-focused**: Island-based matchmaking preferences
+- **Mobile Responsive**: Works great on all devices
 
-Add missing Discord OAuth2 environment variables to Vercel production.
+## Tech Stack
 
-Trigger redeploy Thu Jun 19 15:35:13 HST 2025
+- **Frontend**: Next.js 14, TypeScript, Tailwind CSS
+- **Backend**: Node.js WebSocket server
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: NextAuth.js
+- **Deployment**: Render (WebSocket support)
+
+## Getting Started
+
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Set up environment variables (see `.env.example`)
+4. Start the development server: `npm run dev`
+5. Start the WebSocket server: `cd server && npm run dev`
+
+## Deployment
+
+See [RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md) for detailed deployment instructions on Render.
+
+## Contributing
+
+This project is designed for the Hawaii Smash community. Feel free to contribute improvements!
