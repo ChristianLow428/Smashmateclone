@@ -7,8 +7,8 @@ import Navbar from './components/Navbar'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'LocalHost Smash',
-  description: 'Hawaiʻi matchmaking platform',
+  title: 'Hawaiissbu',
+  description: 'Your Hawaiʻi matchmaking platform and community',
 
   
 }

@@ -13,7 +13,7 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center">
-            <span className="text-xl font-bold text-gray-800">Smashmate Clone</span>
+            <span className="text-xl font-bold text-gray-800">Hawaiissbu</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -55,9 +55,9 @@ export default function Navbar() {
             ) : (
               <button
                 className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                onClick={() => signIn()}
+                onClick={() => signIn('google')}
               >
-                Login
+                Login with Google
               </button>
             )}
           </div>
@@ -118,9 +118,9 @@ export default function Navbar() {
                 ) : (
                   <button
                     className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                    onClick={() => signIn()}
+                    onClick={() => signIn('google')}
                   >
-                    Login
+                    Login with Google
                   </button>
                 )}
               </div>

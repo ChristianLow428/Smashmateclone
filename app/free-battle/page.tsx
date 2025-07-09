@@ -205,17 +205,17 @@ export default function FreeBattle() {
     console.log('handleLeaveMatch: Session exists:', !!session)
     
     try {
-      if (currentMatch) {
-        console.log('Leaving match:', currentMatch)
-        await leaveMatch(currentMatch)
-      }
-      
-      // Clear local state immediately
-      setOpponent(null)
-      setPlayerIndex(null)
+    if (currentMatch) {
+      console.log('Leaving match:', currentMatch)
+      await leaveMatch(currentMatch)
+    }
+    
+    // Clear local state immediately
+    setOpponent(null)
+    setPlayerIndex(null)
       setMatchEnded(true)
-      
-      console.log('Match left, state cleared')
+    
+    console.log('Match left, state cleared')
       console.log('handleLeaveMatch: Session status after leave:', status)
       console.log('handleLeaveMatch: Session exists after leave:', !!session)
     } catch (error) {
