@@ -37,3 +37,5 @@ This project is designed for the Hawaii Smash community. Feel free to contribute
 ## Live Demo
 
 Visit [https://hawaiissbu.onrender.com](https://hawaiissbu.onrender.com) to try the platform!
+
+**Note:** Make sure to update your Google OAuth redirect URI to: `https://hawaiissbu.onrender.com/api/auth/callback/google`
