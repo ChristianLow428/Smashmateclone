@@ -33,3 +33,7 @@ See [RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md) for detailed deployment instr
 ## Contributing
 
 This project is designed for the Hawaii Smash community. Feel free to contribute improvements!
+
+## Live Demo
+
+Visit [https://hawaiissbu.onrender.com](https://hawaiissbu.onrender.com) to try the platform!
