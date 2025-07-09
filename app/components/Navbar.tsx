@@ -13,7 +13,7 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center">
-            <span className="text-xl font-bold text-gray-800">Hawaiissbu</span>
+            <span className="text-xl font-bold text-gray-800">HawaiiSSBU</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -53,12 +53,12 @@ export default function Navbar() {
                 </button>
               </>
             ) : (
-              <button
+              <Link
+                href="/auth/signin"
                 className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                onClick={() => signIn('google')}
               >
                 Login with Google
-              </button>
+              </Link>
             )}
           </div>
 
@@ -116,12 +116,12 @@ export default function Navbar() {
                     </button>
                   </>
                 ) : (
-                  <button
-                    className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                    onClick={() => signIn('google')}
+                  <Link
+                    href="/auth/signin"
+                    className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 block text-center"
                   >
                     Login with Google
-                  </button>
+                  </Link>
                 )}
               </div>
             </div>
