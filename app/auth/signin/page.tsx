@@ -23,19 +23,12 @@ export default function SignIn() {
     setError('')
     
     try {
-      const result = await signIn('google', {
+      // Allow NextAuth to handle the redirect properly
+      await signIn('google', {
         callbackUrl: '/',
-        redirect: false,
       })
-      
-      if (result?.error) {
-        setError('Sign in failed. Please try again.')
-      } else if (result?.ok) {
-        router.push('/')
-      }
     } catch (error) {
       setError('An unexpected error occurred.')
-    } finally {
       setIsLoading(false)
     }
   }

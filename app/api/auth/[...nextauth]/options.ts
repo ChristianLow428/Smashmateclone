@@ -2,6 +2,7 @@ import GoogleProvider from 'next-auth/providers/google'
 import DiscordProvider from 'next-auth/providers/discord'
 import { Session, User } from 'next-auth';
 import { JWT } from 'next-auth/jwt';
+import { NextAuthOptions } from 'next-auth';
 
 export const authOptions = {
   providers: [
@@ -21,9 +22,21 @@ export const authOptions = {
       }
       return session;
     },
+    async jwt({ token, user }: { token: JWT; user?: User }) {
+      if (user) {
+        token.id = user.id;
+      }
+      return token;
+    },
+    async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
+      // Allows relative callback URLs
+      if (url.startsWith("/")) return `${baseUrl}${url}`
+      // Allows callback URLs on the same origin
+      else if (new URL(url).origin === baseUrl) return url
+      return baseUrl
+    },
   },
   pages: {
-    signIn: '/auth/signin',
     error: '/auth/error',
   },
   secret: process.env.NEXTAUTH_SECRET,
