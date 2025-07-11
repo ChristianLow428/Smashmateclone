@@ -68,10 +68,10 @@ export default async function RankingsPage() {
               <p className="text-hawaii-muted">No rankings found for channel ID: {RANKINGS_CHANNEL_ID}</p>
               <p className="mt-2 text-sm text-hawaii-muted">Debug info:</p>
               <pre className="bg-background p-2 rounded text-sm mt-2 overflow-auto text-hawaii-muted border border-hawaii-border">
-                {JSON.stringify(envDebug, null, 2)}
-              </pre>
-            </div>
-          </div>
+            {JSON.stringify(envDebug, null, 2)}
+          </pre>
+        </div>
+      </div>
         </div>
       </main>
     );
@@ -99,7 +99,7 @@ export default async function RankingsPage() {
             </div>
           </div>
         </div>
-      </div>
+    </div>
     </main>
   );
 }

@@ -16,7 +16,7 @@ export async function PUT(request: Request) {
   }
 
   try {
-    const { name } = await request.json();
+    const { displayName } = await request.json();
     
     // First check if profile exists
     const { data: existingProfile } = await supabase
@@ -32,7 +32,7 @@ export async function PUT(request: Request) {
         .from('profiles')
         .insert({
           email: session.user.email,
-          name: name,
+          name: displayName,
           image: session.user.image
         })
         .select()
@@ -44,7 +44,7 @@ export async function PUT(request: Request) {
       // Update existing profile
       const { data: updatedProfile, error: updateError } = await supabase
         .from('profiles')
-        .update({ name })
+        .update({ name: displayName })
         .eq('email', session.user.email)
         .select()
         .single();
@@ -53,7 +53,7 @@ export async function PUT(request: Request) {
       data = updatedProfile;
     }
 
-    return NextResponse.json({ name: data.name });
+    return NextResponse.json({ displayName: data.name });
   } catch (error) {
     console.error('Profile update error:', error);
     return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
@@ -82,7 +82,10 @@ export async function GET() {
       throw error;
     }
 
-    return NextResponse.json({ name: data?.name || session.user.name });
+    return NextResponse.json({ 
+      name: data?.name || session.user.name,
+      displayName: data?.name || session.user.name 
+    });
   } catch (error) {
     console.error('Profile fetch error:', error);
     return NextResponse.json({ error: 'Failed to fetch profile' }, { status: 500 });

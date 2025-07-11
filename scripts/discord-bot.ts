@@ -27,6 +27,13 @@ function findFirstUrl(text: string): string | null {
   return match ? match[0] : null;
 }
 
+// Function to find URLs in text (more comprehensive)
+function findUrls(text: string): string[] {
+  const urlRegex = /(https?:\/\/[^\s<>"]+)/g;
+  const matches = text.match(urlRegex);
+  return matches || [];
+}
+
 // Function to clean up the description
 function cleanDescription(text: string): string {
   if (!text) return '';
@@ -105,10 +112,20 @@ async function processMessage(message: Message) {
   if (message.channelId === config.discord.tournamentChannelId) {
     console.log('Processing tournament message:', message.content);
 
-    // Find the first URL in the message
-    const url = findFirstUrl(message.content);
-    if (!url) {
-      console.log('No URL found in message');
+    // Find URLs in the message content
+    let tournamentUrl = findUrls(message.content).find(url => url.includes('start.gg/tournament/'));
+    
+    // Also check if there are any embeds with URLs
+    if (!tournamentUrl && message.embeds.length > 0) {
+      for (const embed of message.embeds) {
+        if (embed.url && embed.url.includes('start.gg/tournament/')) {
+          tournamentUrl = embed.url;
+        }
+      }
+    }
+    
+    if (!tournamentUrl) {
+      console.log('No valid start.gg tournament URL found in message or embeds');
       return;
     }
 
@@ -120,12 +137,15 @@ async function processMessage(message: Message) {
       const messageWithEmbeds = await message.channel.messages.fetch(message.id);
       const embed = messageWithEmbeds.embeds[0];
       
-      // Use embed data if available, otherwise fall back to content
+      // Use embed title if available, but always use the original message content for description
       const title = embed?.title || extractTitle(message.content);
-      const description = embed?.description || cleanDescription(message.content);
+      
+      // Always use the original message content as description to preserve URLs and details
+      const finalTitle = title || extractTitle(message.content);
+      const finalDescription = message.content;
 
-      console.log('Extracted title:', title);
-      console.log('Extracted description:', description);
+      console.log('Extracted title:', finalTitle);
+      console.log('Extracted description:', finalDescription);
 
       // Send to your API
       const apiResponse = await fetch(`${config.app.url}/api/webhook/tournament`, {
@@ -138,8 +158,8 @@ async function processMessage(message: Message) {
           timestamp: message.createdAt.toISOString(),
           discord_message_id: message.id,
           discord_channel_id: message.channelId,
-          title: title,
-          description: description,
+          title: finalTitle,
+          description: finalDescription,
         }),
       });
 
@@ -147,6 +167,74 @@ async function processMessage(message: Message) {
       console.log('Tournament saved:', data);
     } catch (error) {
       console.error('Error processing tournament:', error);
+    }
+  }
+}
+
+// Function to handle message deletion
+async function handleMessageDelete(messageId: string, channelId: string) {
+  console.log(`Message deleted: ${messageId} from channel: ${channelId}`);
+  
+  // Only handle tournament channel deletions
+  if (channelId === config.discord.tournamentChannelId) {
+    try {
+      // Call the DELETE endpoint to remove the tournament
+      const response = await fetch(`${config.app.url}/api/webhook/tournament?messageId=${messageId}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        console.log(`Tournament deleted from database: ${messageId}`);
+      } else {
+        console.error(`Failed to delete tournament: ${messageId}`);
+      }
+    } catch (error) {
+      console.error('Error deleting tournament:', error);
+    }
+  }
+}
+
+// Function to sync tournaments with Discord
+async function syncTournaments() {
+  console.log('Syncing tournaments with Discord...');
+  
+  const tournamentChannel = await client.channels.fetch(config.discord.tournamentChannelId);
+  if (tournamentChannel && tournamentChannel.isTextBased()) {
+    const tournamentMessages = await tournamentChannel.messages.fetch({ limit: 100 });
+    
+    // Only include message IDs that contain valid tournament URLs
+    const validTournamentMessageIds: string[] = [];
+    
+    for (const [messageId, message] of tournamentMessages) {
+      // Check if message content has valid tournament URL
+      const urls = findUrls(message.content);
+      const hasValidUrl = urls.some(url => url.includes('start.gg/tournament/'));
+      
+      // Also check embeds
+      const hasValidEmbed = message.embeds.some(embed => 
+        embed.url && embed.url.includes('start.gg/tournament/')
+      );
+      
+      if (hasValidUrl || hasValidEmbed) {
+        validTournamentMessageIds.push(messageId);
+      }
+    }
+    
+    console.log(`Found ${validTournamentMessageIds.length} valid tournament messages out of ${tournamentMessages.size} total messages`);
+    
+    // Call the cleanup endpoint to remove tournaments that no longer exist in Discord
+    try {
+      const response = await fetch(`${config.app.url}/api/webhook/tournament?messageIds=${validTournamentMessageIds.join(',')}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        console.log('Tournament sync completed');
+      } else {
+        console.error('Failed to sync tournaments');
+      }
+    } catch (error) {
+      console.error('Error syncing tournaments:', error);
     }
   }
 }
@@ -175,11 +263,26 @@ client.once('ready', async () => {
       break; // Only process the most recent
     }
   }
+
+  // Initial sync to clean up any orphaned tournaments
+  // await syncTournaments(); // Temporarily disabled for debugging
 });
 
 // Listen for new messages
 client.on('messageCreate', async (message: Message) => {
   await processMessage(message);
+});
+
+// Listen for message deletions
+client.on('messageDelete', async (message) => {
+  await handleMessageDelete(message.id, message.channelId);
+});
+
+// Listen for bulk message deletions
+client.on('messageDeleteBulk', async (messages) => {
+  for (const [messageId, message] of messages) {
+    await handleMessageDelete(messageId, message.channelId);
+  }
 });
 
 // Log in to Discord with your client's token

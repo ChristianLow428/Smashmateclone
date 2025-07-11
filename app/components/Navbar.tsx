@@ -1,11 +1,51 @@
 'use client'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSession, signIn, signOut } from 'next-auth/react'
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [displayName, setDisplayName] = useState<string | null>(null)
   const { data: session, status } = useSession()
+
+  // Function to fetch display name
+  const fetchDisplayName = () => {
+    if (session?.user?.email) {
+      fetch('/api/user/profile')
+        .then(response => response.json())
+        .then(data => {
+          if (data.displayName) {
+            setDisplayName(data.displayName);
+          } else if (data.name) {
+            setDisplayName(data.name);
+          } else {
+            setDisplayName(session.user?.name || session.user?.email || 'User');
+          }
+        })
+        .catch(error => {
+          console.error('Failed to fetch display name:', error);
+          setDisplayName(session.user?.name || session.user?.email || 'User');
+        });
+    }
+  };
+
+  // Fetch the user's display name from the profile API
+  useEffect(() => {
+    fetchDisplayName();
+  }, [session?.user?.email, session?.user?.name]);
+
+  // Listen for profile updates
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      fetchDisplayName();
+    };
+
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+    
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
+    };
+  }, [session?.user?.email, session?.user?.name]);
 
   return (
     <nav className="bg-card-bg border-b border-hawaii-border shadow-lg">
@@ -43,7 +83,7 @@ export default function Navbar() {
                   href="/profile" 
                   className="text-hawaii-muted hover:text-hawaii-accent transition-colors font-medium"
                 >
-                  {session.user?.name || session.user?.email}
+                  {displayName || session.user?.name || session.user?.email}
                 </Link>
                 <button
                   className="bg-card-bg-alt text-hawaii-muted px-4 py-2 rounded-lg hover:bg-hawaii-primary hover:text-white transition-colors font-medium"
@@ -106,7 +146,7 @@ export default function Navbar() {
                       href="/profile" 
                       className="block text-hawaii-muted hover:text-hawaii-accent transition-colors mb-2 font-medium"
                     >
-                      {session.user?.name || session.user?.email}
+                      {displayName || session.user?.name || session.user?.email}
                     </Link>
                     <button
                       className="w-full bg-card-bg text-hawaii-muted px-4 py-2 rounded hover:bg-hawaii-primary hover:text-white transition-colors font-medium"
