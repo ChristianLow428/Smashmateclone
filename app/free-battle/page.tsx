@@ -229,17 +229,19 @@ export default function FreeBattle() {
 
   if (status === 'loading') {
     return (
-      <div className="container mx-auto px-4 py-8 text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-        <p>Loading...</p>
-      </div>
+      <main className="min-h-screen bg-background">
+        <div className="max-w-2xl mx-auto px-4 py-8 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-hawaii-primary mx-auto mb-4"></div>
+          <p className="text-hawaii-muted">Loading...</p>
+        </div>
+      </main>
     )
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-2xl mx-auto relative">
-        <h1 className="text-3xl font-bold mb-8 text-center">Free Battle</h1>
+    <main className="min-h-screen bg-background">
+      <div className="max-w-2xl mx-auto px-4 py-8 relative">
+        <h1 className="text-4xl font-bold mb-8 text-center text-hawaii-primary font-monopol">Free Battle</h1>
         {/* Hawaii Smash Ultimate Ruleset Image */}
         <div className="mb-8 flex flex-col items-center">
           <Image
@@ -247,25 +249,25 @@ export default function FreeBattle() {
             alt="Hawaii Smash Ultimate Ruleset"
             width={800}
             height={600}
-            className="rounded-lg shadow-lg"
+            className="rounded-lg shadow-lg border border-hawaii-border"
             priority
           />
-          <span className="text-gray-500 text-sm mt-2">Hawaii Smash Ultimate Ruleset</span>
+          <span className="text-hawaii-muted text-sm mt-2">Hawaii Smash Ultimate Ruleset</span>
         </div>
         {/* Overlay if not logged in */}
         {shouldShowLoginOverlay && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-gray-200 bg-opacity-80 backdrop-blur-sm rounded-lg">
-            <div className="bg-red-600 text-white px-6 py-3 rounded-lg text-lg font-bold mb-4 shadow-lg">
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background bg-opacity-80 backdrop-blur-sm rounded-lg border border-hawaii-border">
+            <div className="bg-hawaii-primary text-white px-6 py-3 rounded-lg text-lg font-bold mb-4 shadow-lg">
               Need to login to play
             </div>
             <button
-              className="bg-blue-500 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-blue-600 transition-colors mb-4"
+              className="bg-hawaii-secondary text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-hawaii-accent transition-colors mb-4"
               onClick={() => signIn()}
             >
               Login
             </button>
             <button
-              className="bg-gray-300 text-gray-800 px-8 py-3 rounded-lg text-lg font-semibold hover:bg-gray-400 transition-colors"
+              className="bg-card-bg-alt text-hawaii-muted px-8 py-3 rounded-lg text-lg font-semibold hover:bg-hawaii-border transition-colors border border-hawaii-border"
               onClick={() => window.location.href = '/'}
             >
               Go back to homepage
@@ -274,22 +276,22 @@ export default function FreeBattle() {
         )}
         {/* Error Message */}
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <div className="bg-card-bg-alt border border-hawaii-primary text-hawaii-primary px-4 py-3 rounded-lg mb-4">
             {error}
           </div>
         )}
         {/* Match Preferences */}
-        <div className={`bg-white rounded-lg shadow-md p-6 mb-8 ${isDisabled ? 'pointer-events-none opacity-60' : ''}`}>
-          <h2 className="text-xl font-semibold mb-4">Match Preferences</h2>
+        <div className={`bg-card-bg rounded-lg shadow-lg border border-hawaii-border p-6 mb-8 ${isDisabled ? 'pointer-events-none opacity-60' : ''}`}>
+          <h2 className="text-2xl font-bold mb-6 text-hawaii-accent font-monopol">Match Preferences</h2>
           {/* Island Selection */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-hawaii-muted mb-2">
               Island
             </label>
             <select
               value={preferences.island}
               onChange={(e) => setPreferences({ ...preferences, island: e.target.value })}
-              className="w-full p-2 border rounded-md"
+              className="w-full p-3 border border-hawaii-border rounded-lg bg-card-bg-alt text-hawaii-muted focus:border-hawaii-primary focus:outline-none"
               disabled={isSearching || isDisabled}
             >
               <option value="Hawaiʻi">Hawaiʻi</option>
@@ -301,21 +303,21 @@ export default function FreeBattle() {
             </select>
           </div>
           {/* Connection Type */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-hawaii-muted mb-2">
               Connection Type
             </label>
-            <div className="flex space-x-4">
+            <div className="flex space-x-6">
               <label className="inline-flex items-center">
                 <input
                   type="radio"
                   value="wired"
                   checked={preferences.connection === 'wired'}
                   onChange={(e) => setPreferences({ ...preferences, connection: 'wired' })}
-                  className="form-radio"
+                  className="form-radio text-hawaii-primary focus:ring-hawaii-primary"
                   disabled={isSearching || isDisabled}
                 />
-                <span className="ml-2">Wired</span>
+                <span className="ml-2 text-hawaii-muted">Wired</span>
               </label>
               <label className="inline-flex items-center">
                 <input
@@ -323,13 +325,13 @@ export default function FreeBattle() {
                   value="wireless"
                   checked={preferences.connection === 'wireless'}
                   onChange={(e) => setPreferences({ ...preferences, connection: 'wireless' })}
-                  className="form-radio"
+                  className="form-radio text-hawaii-primary focus:ring-hawaii-primary"
                   disabled={isSearching || isDisabled}
                 />
-                <span className="ml-2">Wireless</span>
+                <span className="ml-2 text-hawaii-muted">Wireless</span>
               </label>
             </div>
-            <p className="text-xs text-gray-500 mt-2">Wired is usually preferred for optimal online play.</p>
+            <p className="text-xs text-hawaii-muted mt-2">Wired is usually preferred for optimal online play.</p>
           </div>
         </div>
         {/* Search Button */}
@@ -337,7 +339,7 @@ export default function FreeBattle() {
           {!isSearching ? (
             <button
               onClick={handleStartSearch}
-              className="bg-blue-500 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-blue-600 transition-colors"
+              className="bg-hawaii-primary text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-hawaii-accent transition-colors"
               disabled={isDisabled}
             >
               Find Match
@@ -345,12 +347,12 @@ export default function FreeBattle() {
           ) : (
             <div className="space-y-4">
               <div className="flex items-center justify-center space-x-2">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-                <span className="text-lg">Searching for opponent...</span>
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-hawaii-primary"></div>
+                <span className="text-lg text-hawaii-muted">Searching for opponent...</span>
               </div>
               <button
                 onClick={handleCancelSearch}
-                className="text-red-500 hover:text-red-600"
+                className="text-hawaii-primary hover:text-hawaii-accent transition-colors"
               >
                 Cancel Search
               </button>
@@ -374,6 +376,6 @@ export default function FreeBattle() {
           matchEnded={matchEnded}
         />
       ) : null}
-    </div>
+    </main>
   )
 } 

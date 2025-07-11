@@ -49,92 +49,91 @@ export default async function Home() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-8">
-      <div className="max-w-5xl w-full space-y-8">
-        {/* Hero Section */}
+    <main className="min-h-screen bg-background">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Hero Section - SoCalSmash Style */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">
-            Welcome to Hawaii Smashmate Clone
+          <h1 className="text-5xl font-bold mb-4 text-hawaii-primary font-monopol">
+            HawaiiSSBU
           </h1>
-          <p className="text-lg text-gray-600">
-            Your Super Smash Bros. matchmaking platform
+          <p className="text-xl text-hawaii-muted">
+            Super Smash Bros. Ultimate Tournament Events & Results in Hawaii
           </p>
         </div>
 
-        {/* Main Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-2xl font-semibold mb-4">Free Battle</h2>
-            <p className="text-gray-600 mb-4">Find casual matches with players of any skill level</p>
-            <Link
-              href="/free-battle"
-              className="inline-block bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600"
-            >
-              Find Match
-            </Link>
-          </div>
-          
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-2xl font-semibold mb-4">Rating Battle</h2>
-            <p className="text-gray-600 mb-4">Compete in ranked matches and climb the leaderboard</p>
-            <Link
-              href="/rating-battle"
-              className="inline-block bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600"
-            >
-              Start Battle
-            </Link>
-          </div>
-        </div>
-
-        {/* Rankings and Upcoming Tournaments Side by Side */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Current Rankings */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-2xl font-semibold mb-6">Current Rankings</h2>
-            <ol className="space-y-2">
-              {mockRankings.map((player, idx) => (
-                <li key={player.name} className="flex justify-between items-center">
-                  <span className="font-medium">{idx + 1}. {player.name}</span>
-                  <span className="text-gray-500">{player.rating}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
-          {/* Upcoming Tournaments */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-2xl font-semibold mb-6">Upcoming Tournaments</h2>
-            <div className="grid grid-cols-1 gap-4">
-              {tournaments?.map((tournament: Tournament) => {
-                const tournamentLink = findFirstUrl(tournament.description || '');
-                
-                return (
-                  <div key={tournament.id} className="bg-gray-50 rounded-lg p-4 flex flex-col h-full">
-                    <div className="flex-grow">
-                      <h3 className="font-semibold mb-1 line-clamp-1">{tournament.title}</h3>
-                      <p className="text-sm text-gray-600 line-clamp-2">{tournament.description}</p>
+        {/* Main Content Grid - SoCalSmash Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Current Rankings - Left Column */}
+          <div className="lg:col-span-1">
+            <div className="bg-card-bg rounded-lg shadow-lg border border-hawaii-border p-6">
+              <h2 className="text-2xl font-bold mb-6 text-hawaii-accent border-b border-hawaii-border pb-2 font-monopol">
+                Current Rankings
+              </h2>
+              <div className="space-y-3">
+                {mockRankings.slice(0, 10).map((player, idx) => (
+                  <div key={player.name} className="flex justify-between items-center py-2 border-b border-hawaii-border/30 last:border-b-0">
+                    <div className="flex items-center">
+                      <span className="text-hawaii-primary font-bold mr-3">#{idx + 1}</span>
+                      <span className="font-medium text-hawaii-muted">{player.name}</span>
                     </div>
-                    {tournamentLink && (
-                      <div className="mt-2">
-                        <Link
-                          href={tournamentLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-blue-500 hover:text-blue-600"
-                        >
-                          View Details →
-                        </Link>
-                      </div>
-                    )}
+                    <span className="text-hawaii-secondary font-semibold">{player.rating}</span>
                   </div>
-                );
-              })}
-              <div className="text-right">
+                ))}
+              </div>
+              <div className="mt-4 text-center">
                 <Link
-                  href="/tournaments"
-                  className="text-sm text-blue-500 hover:text-blue-600"
+                  href="/rankings"
+                  className="text-hawaii-secondary hover:text-hawaii-accent transition-colors font-semibold"
                 >
-                  View All Tournaments →
+                  View Full Rankings →
                 </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Upcoming Tournaments - Right Column */}
+          <div className="lg:col-span-2">
+            <div className="bg-card-bg rounded-lg shadow-lg border border-hawaii-border p-6">
+              <h2 className="text-2xl font-bold mb-6 text-hawaii-accent border-b border-hawaii-border pb-2 font-monopol">
+                Upcoming Tournaments
+              </h2>
+              <div className="space-y-4">
+                {tournaments?.map((tournament: Tournament) => {
+                  const tournamentLink = findFirstUrl(tournament.description || '');
+                  
+                  return (
+                    <div key={tournament.id} className="bg-card-bg-alt rounded-lg p-4 border border-hawaii-border hover:border-hawaii-primary/50 transition-colors">
+                      <div className="flex justify-between items-start mb-3">
+                        <h3 className="font-bold text-lg text-hawaii-primary line-clamp-1 font-monopol">{tournament.title}</h3>
+                        <span className="text-sm text-hawaii-muted bg-card-bg px-2 py-1 rounded">
+                          {new Date(tournament.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-hawaii-muted text-sm mb-3 line-clamp-2">{tournament.description}</p>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-hawaii-muted">Tournament Organizer</span>
+                        {tournamentLink && (
+                          <Link
+                            href={tournamentLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-hawaii-primary text-white px-4 py-2 rounded text-sm font-semibold hover:bg-hawaii-secondary transition-colors"
+                          >
+                            Register Now
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="text-center pt-4">
+                  <Link
+                    href="/tournaments"
+                    className="text-hawaii-secondary hover:text-hawaii-accent transition-colors font-semibold"
+                  >
+                    View All Tournaments →
+                  </Link>
+                </div>
               </div>
             </div>
           </div>

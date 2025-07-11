@@ -8,30 +8,30 @@ export default function Navbar() {
   const { data: session, status } = useSession()
 
   return (
-    <nav className="bg-white shadow-lg">
-      <div className="container mx-auto px-4">
+    <nav className="bg-card-bg border-b border-hawaii-border shadow-lg">
+      <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center">
-            <span className="text-xl font-bold text-gray-800">HawaiiSSBU</span>
+            <span className="text-2xl font-bold text-hawaii-primary font-monopol">HawaiiSSBU</span>
           </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex space-x-8">
-            <Link href="/free-battle" className="text-gray-600 hover:text-blue-600">
+            <Link href="/free-battle" className="text-hawaii-muted hover:text-hawaii-accent transition-colors font-medium">
               Free Battle
             </Link>
-            <Link href="/rating-battle" className="text-gray-600 hover:text-blue-600">
+            <Link href="/rating-battle" className="text-hawaii-muted hover:text-hawaii-accent transition-colors font-medium">
               Rating Battle
             </Link>
-            <Link href="/tournaments" className="text-gray-600 hover:text-blue-600">
+            <Link href="/tournaments" className="text-hawaii-muted hover:text-hawaii-accent transition-colors font-medium">
               Tournaments
             </Link>
-            <Link href="/rankings" className="text-gray-600 hover:text-blue-600">
+            <Link href="/rankings" className="text-hawaii-muted hover:text-hawaii-accent transition-colors font-medium">
               Rankings
             </Link>
-            <Link href="/profile" className="text-gray-600 hover:text-blue-600">
-              Profile
+            <Link href="/about" className="text-hawaii-muted hover:text-hawaii-accent transition-colors font-medium">
+              About
             </Link>
           </div>
 
@@ -41,12 +41,12 @@ export default function Navbar() {
               <>
                 <Link 
                   href="/profile" 
-                  className="text-gray-700 hover:text-blue-600 transition-colors"
+                  className="text-hawaii-muted hover:text-hawaii-accent transition-colors font-medium"
                 >
                   {session.user?.name || session.user?.email}
                 </Link>
                 <button
-                  className="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400"
+                  className="bg-card-bg-alt text-hawaii-muted px-4 py-2 rounded-lg hover:bg-hawaii-primary hover:text-white transition-colors font-medium"
                   onClick={() => signOut()}
                 >
                   Logout
@@ -54,7 +54,7 @@ export default function Navbar() {
               </>
             ) : (
               <button
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                className="bg-hawaii-primary text-white px-6 py-2 rounded-lg hover:bg-hawaii-secondary transition-colors font-semibold"
                 onClick={() => signIn('google')}
               >
                 Login with Google
@@ -66,7 +66,7 @@ export default function Navbar() {
           <div className="md:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="text-gray-600 hover:text-gray-900"
+              className="text-hawaii-muted hover:text-hawaii-accent"
             >
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
@@ -82,34 +82,34 @@ export default function Navbar() {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden">
+          <div className="md:hidden bg-card-bg-alt border-t border-hawaii-border">
             <div className="px-2 pt-2 pb-3 space-y-1">
-              <Link href="/free-battle" className="block px-3 py-2 text-gray-600 hover:text-gray-900">
+              <Link href="/free-battle" className="block px-3 py-2 text-hawaii-muted hover:text-hawaii-accent transition-colors font-medium">
                 Free Battle
               </Link>
-              <Link href="/rating-battle" className="block px-3 py-2 text-gray-600 hover:text-gray-900">
+              <Link href="/rating-battle" className="block px-3 py-2 text-hawaii-muted hover:text-hawaii-accent transition-colors font-medium">
                 Rating Battle
               </Link>
-              <Link href="/tournaments" className="block px-3 py-2 text-gray-600 hover:text-gray-900">
+              <Link href="/tournaments" className="block px-3 py-2 text-hawaii-muted hover:text-hawaii-accent transition-colors font-medium">
                 Tournaments
               </Link>
-              <Link href="/rankings" className="block px-3 py-2 text-gray-600 hover:text-gray-900">
+              <Link href="/rankings" className="block px-3 py-2 text-hawaii-muted hover:text-hawaii-accent transition-colors font-medium">
                 Rankings
               </Link>
-              <Link href="/profile" className="block px-3 py-2 text-gray-600 hover:text-gray-900">
-                Profile
+              <Link href="/about" className="block px-3 py-2 text-hawaii-muted hover:text-hawaii-accent transition-colors font-medium">
+                About
               </Link>
-              <div className="pt-4 pb-3 border-t border-gray-200">
+              <div className="pt-4 pb-3 border-t border-hawaii-border">
                 {status === 'loading' ? null : session ? (
                   <>
                     <Link 
                       href="/profile" 
-                      className="block text-gray-700 hover:text-blue-600 transition-colors mb-2"
+                      className="block text-hawaii-muted hover:text-hawaii-accent transition-colors mb-2 font-medium"
                     >
                       {session.user?.name || session.user?.email}
                     </Link>
                     <button
-                      className="w-full bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400"
+                      className="w-full bg-card-bg text-hawaii-muted px-4 py-2 rounded hover:bg-hawaii-primary hover:text-white transition-colors font-medium"
                       onClick={() => signOut()}
                     >
                       Logout
@@ -117,7 +117,7 @@ export default function Navbar() {
                   </>
                 ) : (
                   <button
-                    className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                    className="w-full bg-hawaii-primary text-white px-4 py-2 rounded hover:bg-hawaii-secondary transition-colors font-medium"
                     onClick={() => signIn('google')}
                   >
                     Login with Google

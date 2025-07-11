@@ -22,26 +22,26 @@ function AuthErrorContent() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-hawaii-primary">
             Authentication Error
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-center text-sm text-hawaii-muted">
             {getErrorMessage(error)}
           </p>
         </div>
         
         <div className="mt-8 space-y-6">
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+          <div className="bg-red-900/20 border border-red-500/30 text-red-400 px-4 py-3 rounded">
             {getErrorMessage(error)}
           </div>
           
           <div className="text-center space-y-4">
             <Link
               href="/auth/signin"
-              className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              className="inline-block bg-hawaii-primary text-white px-4 py-2 rounded hover:bg-hawaii-secondary transition-colors"
             >
               Try Again
             </Link>
@@ -49,7 +49,7 @@ function AuthErrorContent() {
             <div>
               <Link
                 href="/"
-                className="text-blue-600 hover:text-blue-500"
+                className="text-hawaii-secondary hover:text-hawaii-accent transition-colors"
               >
                 Back to Home
               </Link>
@@ -64,10 +64,10 @@ function AuthErrorContent() {
 export default function AuthError() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-hawaii-primary mx-auto"></div>
+          <p className="mt-2 text-hawaii-muted">Loading...</p>
         </div>
       </div>
     }>

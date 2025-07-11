@@ -46,30 +46,60 @@ export default async function RankingsPage() {
   console.log('Query result:', { messages, error, channelId: RANKINGS_CHANNEL_ID });
 
   if (error) {
-    return <div>Error loading rankings: {error.message}</div>;
+    return (
+      <main className="min-h-screen bg-background">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="bg-card-bg rounded-lg shadow-lg border border-hawaii-border p-8">
+            <h1 className="text-4xl font-bold mb-4 text-hawaii-primary font-monopol">Error Loading Rankings</h1>
+            <p className="text-hawaii-muted">{error.message}</p>
+          </div>
+        </div>
+      </main>
+    );
   }
 
   if (!messages || messages.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8">No Rankings Available</h1>
-        <div className="bg-yellow-100 p-4 rounded">
-          <p>No rankings found for channel ID: {RANKINGS_CHANNEL_ID}</p>
-          <p className="mt-2 text-sm">Debug info:</p>
-          <pre className="bg-gray-100 p-2 rounded text-sm mt-2 overflow-auto">
-            {JSON.stringify(envDebug, null, 2)}
-          </pre>
+      <main className="min-h-screen bg-background">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="bg-card-bg rounded-lg shadow-lg border border-hawaii-border p-8">
+            <h1 className="text-4xl font-bold mb-4 text-hawaii-primary font-monopol">No Rankings Available</h1>
+            <div className="bg-card-bg-alt p-4 rounded-lg border border-hawaii-border">
+              <p className="text-hawaii-muted">No rankings found for channel ID: {RANKINGS_CHANNEL_ID}</p>
+              <p className="mt-2 text-sm text-hawaii-muted">Debug info:</p>
+              <pre className="bg-background p-2 rounded text-sm mt-2 overflow-auto text-hawaii-muted border border-hawaii-border">
+                {JSON.stringify(envDebug, null, 2)}
+              </pre>
+            </div>
+          </div>
         </div>
-      </div>
+      </main>
     );
   }
 
   const cleanedContent = cleanDiscordMarkdown(messages[0].content);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Latest Offline Rankings</h1>
-      <pre className="bg-gray-100 p-4 rounded whitespace-pre-wrap">{cleanedContent}</pre>
-    </div>
+    <main className="min-h-screen bg-background">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <h1 className="text-4xl font-bold mb-8 text-hawaii-primary font-monopol text-center">Hawaii Rankings</h1>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Offline Rankings - Left Side */}
+          <div className="bg-card-bg rounded-lg shadow-lg border border-hawaii-border p-8">
+            <h2 className="text-2xl font-bold mb-6 text-hawaii-accent font-monopol">Offline Rankings</h2>
+            <pre className="bg-card-bg-alt p-4 rounded-lg whitespace-pre-wrap text-hawaii-muted border border-hawaii-border font-segoe max-h-96 overflow-y-auto">{cleanedContent}</pre>
+          </div>
+
+          {/* Online Rankings - Right Side (Placeholder) */}
+          <div className="bg-card-bg rounded-lg shadow-lg border border-hawaii-border p-8">
+            <h2 className="text-2xl font-bold mb-6 text-hawaii-accent font-monopol">Online Rankings</h2>
+            <div className="bg-card-bg-alt p-4 rounded-lg border border-hawaii-border">
+              <p className="text-hawaii-muted text-center">Online rankings coming soon...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
   );
 }

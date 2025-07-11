@@ -34,20 +34,20 @@ export default function SignIn() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-hawaii-primary">
             Sign in to HawaiiSSBU
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Join the Super Smash Bros Ultimate community
+          <p className="mt-2 text-center text-sm text-hawaii-muted">
+            Join the Super Smash Bros Ultimate community 🌺
           </p>
         </div>
         
         <div className="mt-8 space-y-6">
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+            <div className="bg-red-900/20 border border-red-500/30 text-red-400 px-4 py-3 rounded">
               {error}
             </div>
           )}
@@ -55,7 +55,7 @@ export default function SignIn() {
           <button
             onClick={handleGoogleSignIn}
             disabled={isLoading}
-            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-hawaii-primary hover:bg-hawaii-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-hawaii-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isLoading ? (
               <span>Signing in...</span>
@@ -75,7 +75,7 @@ export default function SignIn() {
           <div className="text-center">
             <button
               onClick={() => router.push('/')}
-              className="text-blue-600 hover:text-blue-500"
+              className="text-hawaii-secondary hover:text-hawaii-accent transition-colors"
             >
               Back to Home
             </button>
