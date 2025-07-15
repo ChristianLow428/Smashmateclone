@@ -32,9 +32,9 @@ export default function ProfilePage() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="max-w-md mx-auto bg-card-bg rounded-lg shadow-lg border border-hawaii-border p-6">
           <h1 className="text-2xl font-bold text-center mb-6 text-hawaii-primary font-monopol">Profile Settings</h1>
-          <ProfileForm user={session.user ?? {}} />
-        </div>
+        <ProfileForm user={session.user ?? {}} />
       </div>
+    </div>
     </main>
   );
 } 

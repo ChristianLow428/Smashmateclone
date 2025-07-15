@@ -357,11 +357,11 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md h-full flex flex-col">
+    <div className="bg-card-bg rounded-lg shadow-lg border border-hawaii-border h-full flex flex-col">
       {/* Header */}
-      <div className={`text-white p-2 md:p-3 rounded-t-lg flex justify-between items-center ${opponentLeft ? 'bg-red-600' : 'bg-blue-600'}`}>
+      <div className={`text-white p-2 md:p-3 rounded-t-lg flex justify-between items-center ${opponentLeft ? 'bg-red-600' : 'bg-hawaii-primary'}`}>
         <div>
-          <h3 className="text-sm font-semibold">Match Chat</h3>
+          <h3 className="text-sm font-semibold font-monopol">Match Chat</h3>
           <p className="text-xs opacity-90">
             {opponent.preferences.island} ({opponent.preferences.connection})
             {opponentLeft && <span className="text-red-200 ml-1 font-semibold">• OPPONENT LEFT</span>}
@@ -370,7 +370,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
         <div className="flex items-center space-x-1 md:space-x-2">
           <button
             onClick={sendTestMessage}
-            className="px-1 md:px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+            className="px-1 md:px-2 py-1 bg-hawaii-accent text-white rounded text-xs hover:bg-hawaii-secondary transition-colors"
             title="Send test message"
           >
             Test
@@ -390,15 +390,15 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
           <div className="bg-red-50 border border-red-200 rounded-lg p-2 md:p-3 mb-3">
             <div className="flex items-center space-x-2">
               <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-              <span className="text-red-800 font-semibold text-sm">Opponent has left the match</span>
+              <span className="text-red-800 font-semibold text-sm font-monopol">Opponent has left the match</span>
             </div>
             <p className="text-red-700 text-xs mt-1">You can no longer send messages to them.</p>
           </div>
         )}
         
         {messages.length === 0 ? (
-          <div className="text-center text-gray-500 mt-4">
-            <p className="text-sm">Start chatting!</p>
+          <div className="text-center text-hawaii-muted mt-4">
+            <p className="text-sm font-monopol">Start chatting!</p>
           </div>
         ) : (
           messages.map((message) => (
@@ -409,10 +409,10 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
               <div
                 className={`max-w-[85%] px-2 py-1 rounded text-sm ${
                   message.type === 'system'
-                    ? 'bg-gray-100 text-gray-600 text-center italic'
+                    ? 'bg-card-bg-alt text-hawaii-muted text-center italic border border-hawaii-border'
                     : message.sender === (session?.user?.name || 'You')
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-200 text-gray-800'
+                    ? 'bg-hawaii-primary text-white'
+                    : 'bg-card-bg-alt text-hawaii-accent border border-hawaii-border'
                 }`}
               >
                 {message.type !== 'system' && (
@@ -432,7 +432,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
       </div>
 
       {/* Input Area */}
-      <div className="p-2 md:p-3 border-t">
+      <div className="p-2 md:p-3 border-t border-hawaii-border">
         <div className="flex space-x-2">
           <input
             type="text"
@@ -440,13 +440,13 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder={opponentLeft ? "Opponent left" : "Type message..."}
-            className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="flex-1 px-2 py-1 text-sm border border-hawaii-border bg-card-bg-alt text-hawaii-muted rounded focus:outline-none focus:ring-1 focus:ring-hawaii-primary focus:border-hawaii-primary"
             disabled={opponentLeft}
           />
           <button
             onClick={sendMessage}
             disabled={!newMessage.trim() || opponentLeft}
-            className="px-2 md:px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-2 md:px-3 py-1 bg-hawaii-primary text-white rounded text-sm hover:bg-hawaii-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-monopol"
           >
             Send
           </button>

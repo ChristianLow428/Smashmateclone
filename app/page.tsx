@@ -258,7 +258,7 @@ export default async function Home() {
               <div className="space-y-3">
               {tournamentsWithDetails && tournamentsWithDetails.length > 0 ? (
                 tournamentsWithDetails.map((tournament) => {
-                                  return (
+                return (
                     <div key={tournament.id} className="bg-card-bg-alt rounded-lg p-3 border border-hawaii-border hover:border-hawaii-primary/50 transition-colors">
                       {/* Tournament Image */}
                       {tournament.details.image && (
@@ -295,21 +295,21 @@ export default async function Home() {
                           )}
                         </div>
                         
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs text-hawaii-muted">Tournament Organizer</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-hawaii-muted">Tournament Organizer</span>
                       {tournament.tournamentLink && (
-                          <Link
+                        <Link
                             href={tournament.tournamentLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          target="_blank"
+                          rel="noopener noreferrer"
                               className="bg-hawaii-primary text-white px-3 py-1.5 rounded text-xs font-semibold hover:bg-hawaii-secondary transition-colors"
-                          >
+                        >
                               View Details
-                          </Link>
-                          )}
-                        </div>
-                    </div>
-                  );
+                        </Link>
+                        )}
+                      </div>
+                  </div>
+                );
                 })
               ) : (
                 <div className="text-center py-8">
