@@ -301,12 +301,12 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
     console.log('- matchStatusState:', matchStatusState)
     
     return (
-      <div className="bg-white rounded-lg shadow-md p-6 mb-4">
-        <h2 className="text-xl font-semibold mb-4">Character Selection</h2>
+      <div className="bg-card-bg rounded-lg shadow-lg border border-hawaii-border p-6 mb-4">
+        <h2 className="text-xl font-semibold mb-4 text-hawaii-primary font-monopol">Character Selection</h2>
         
         {/* Search Bar */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-hawaii-accent mb-2 font-monopol">
             Search Characters
           </label>
           <input
@@ -317,7 +317,7 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
               console.log('Search input changed:', e.target.value)
               setCharacterSearchTerm(e.target.value)
             }}
-            className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-2 border border-hawaii-border bg-card-bg-alt text-hawaii-muted rounded-md focus:outline-none focus:ring-2 focus:ring-hawaii-primary focus:border-hawaii-primary"
           />
         </div>
         
@@ -328,17 +328,17 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
               <button
                 key={character}
                 onClick={() => handleCharacterSelect(character)}
-                className={`p-2 text-xs sm:text-sm border rounded touch-manipulation ${
+                className={`p-2 text-xs sm:text-sm border rounded touch-manipulation transition-colors ${
                   selectedCharacter === character
-                    ? 'bg-blue-500 text-white border-blue-500'
-                    : 'bg-gray-50 hover:bg-gray-100 border-gray-300'
+                    ? 'bg-hawaii-primary text-white border-hawaii-primary'
+                    : 'bg-card-bg-alt hover:bg-hawaii-accent/20 border-hawaii-border text-hawaii-muted'
                 }`}
               >
                 {character}
               </button>
             ))
           ) : (
-            <div className="col-span-3 sm:col-span-4 md:col-span-6 text-center py-8 text-gray-500">
+            <div className="col-span-3 sm:col-span-4 md:col-span-6 text-center py-8 text-hawaii-muted font-monopol">
               No characters found matching "{characterSearchTerm}"
             </div>
           )}
@@ -349,7 +349,7 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
           <div className="mb-4">
             <button
               onClick={handleConfirmCharacter}
-              className="w-full bg-green-500 text-white py-2 px-4 rounded-md hover:bg-green-600 transition-colors"
+              className="w-full bg-hawaii-primary text-white py-2 px-4 rounded-md hover:bg-hawaii-accent transition-colors font-monopol"
             >
               Confirm {selectedCharacter}
             </button>
@@ -357,11 +357,11 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
         )}
         
         {/* Status Display */}
-        <div className="mt-4 text-sm text-gray-600">
+        <div className="mt-4 text-sm text-hawaii-muted">
           <p>Your Pick: {myChar || (confirmedCharacter ? 'Confirmed' : 'Selecting...')}</p>
           <p>Opponent: {bothPicked ? oppChar : 'Selecting...'}</p>
           {confirmedCharacter && !myChar && (
-            <p className="text-blue-600">Waiting for opponent to select their character...</p>
+            <p className="text-hawaii-primary">Waiting for opponent to select their character...</p>
           )}
           {playerIndex === null && (
             <p className="text-yellow-600">Waiting for player assignment...</p>
@@ -415,21 +415,21 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
     }
     
     return (
-      <div className="bg-white rounded-lg shadow-md p-6 mb-4">
-        <h2 className="text-xl font-semibold mb-4">Stage Striking - Game {currentGame}</h2>
+      <div className="bg-card-bg rounded-lg shadow-lg border border-hawaii-border p-6 mb-4">
+        <h2 className="text-xl font-semibold mb-4 text-hawaii-primary font-monopol">Stage Striking - Game {currentGame}</h2>
         
         {/* Player Indicators */}
         {playerIndex !== null && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="mb-4 p-3 bg-hawaii-primary/10 border border-hawaii-primary/20 rounded-lg">
             <div className="flex justify-between items-center text-sm">
-              <div className={`flex items-center space-x-2 ${playerIndex === 0 ? 'font-semibold text-blue-800' : 'text-gray-600'}`}>
-                <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+              <div className={`flex items-center space-x-2 ${playerIndex === 0 ? 'font-semibold text-hawaii-primary' : 'text-hawaii-muted'}`}>
+                <span className="w-6 h-6 bg-hawaii-primary text-white rounded-full flex items-center justify-center text-xs font-bold">
                   1
                 </span>
                 <span>Player 1 {playerIndex === 0 ? '(You)' : '(Opponent)'}</span>
               </div>
-              <div className={`flex items-center space-x-2 ${playerIndex === 1 ? 'font-semibold text-blue-800' : 'text-gray-600'}`}>
-                <span className="w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+              <div className={`flex items-center space-x-2 ${playerIndex === 1 ? 'font-semibold text-hawaii-primary' : 'text-hawaii-muted'}`}>
+                <span className="w-6 h-6 bg-hawaii-accent text-white rounded-full flex items-center justify-center text-xs font-bold">
                   2
                 </span>
                 <span>Player 2 {playerIndex === 1 ? '(You)' : '(Opponent)'}</span>
@@ -439,16 +439,16 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
         )}
         
         <div className="mb-4">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-hawaii-muted">
             {isGame1 ? 'Starter Stages' : 'All Stages (including counterpicks)'} - {strikesRemaining} strikes remaining
           </p>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-hawaii-muted">
             {turnDescription}
           </p>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div>
-            <h3 className="font-semibold mb-2">Available Stages</h3>
+            <h3 className="font-semibold mb-2 text-hawaii-accent font-monopol">Available Stages</h3>
             <div className="space-y-2">
               {availableStages.map((stage) => {
                 const isStarter = STARTER_STAGES.includes(stage)
@@ -460,29 +460,29 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
                     key={stage}
                     onClick={() => isPickingPhase ? handleStagePick(stage) : handleStageBan(stage)}
                     disabled={!isMyTurn || isBanningStage || isPickingStage}
-                    className={`w-full p-2 text-left border rounded ${
+                    className={`w-full p-2 text-left border rounded transition-colors ${
                       isMyTurn && !isBanningStage && !isPickingStage
                         ? isPickingPhase 
-                          ? 'bg-green-50 hover:bg-green-100 border-green-300'
-                          : 'bg-red-50 hover:bg-red-100 border-red-300'
-                        : 'bg-gray-50 border-gray-300 cursor-not-allowed'
+                          ? 'bg-hawaii-primary/10 hover:bg-hawaii-primary/20 border-hawaii-primary text-hawaii-primary'
+                          : 'bg-red-500/10 hover:bg-red-500/20 border-red-500 text-red-600'
+                        : 'bg-card-bg-alt border-hawaii-border text-hawaii-muted cursor-not-allowed'
                     }`}
                   >
                     <div className="flex justify-between items-center">
                       <span className="text-sm">{stage}</span>
                       <div className="flex items-center space-x-2">
                         {isPickingPhase && isMyTurn && !isPickingStage && (
-                          <span className="text-xs px-2 py-1 rounded bg-green-100 text-green-800">
+                          <span className="text-xs px-2 py-1 rounded bg-hawaii-primary/20 text-hawaii-primary font-monopol">
                             Pick
                           </span>
                         )}
                         {!isPickingPhase && isMyTurn && !isBanningStage && (
-                          <span className="text-xs px-2 py-1 rounded bg-red-100 text-red-800">
+                          <span className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-600 font-monopol">
                             Ban
                           </span>
                         )}
                         {(isBanningStage || isPickingStage) && (
-                          <span className="text-xs px-2 py-1 rounded bg-yellow-100 text-yellow-800">
+                          <span className="text-xs px-2 py-1 rounded bg-yellow-500/20 text-yellow-600 font-monopol">
                             Processing...
                           </span>
                         )}
@@ -494,14 +494,14 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
             </div>
           </div>
           <div>
-            <h3 className="font-semibold mb-2">Banned Stages</h3>
+            <h3 className="font-semibold mb-2 text-hawaii-accent font-monopol">Banned Stages</h3>
             <div className="space-y-2">
               {bannedStages.map((stage) => {
                 const isStarter = STARTER_STAGES.includes(stage)
                 const isCounterpick = COUNTERPICK_STAGES.includes(stage)
                 
                 return (
-                  <div key={stage} className="p-2 bg-gray-100 border rounded text-gray-500">
+                  <div key={stage} className="p-2 bg-card-bg-alt border border-hawaii-border rounded text-hawaii-muted">
                     <div className="flex justify-between items-center">
                       <span className="text-sm">{stage}</span>
                     </div>
@@ -516,21 +516,21 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
   }
 
   const renderGameActive = () => (
-    <div className="bg-white rounded-lg shadow-md p-6 mb-4">
-      <h2 className="text-xl font-semibold mb-4">Game {currentGame}</h2>
+    <div className="bg-card-bg rounded-lg shadow-lg border border-hawaii-border p-6 mb-4">
+      <h2 className="text-xl font-semibold mb-4 text-hawaii-primary font-monopol">Game {currentGame}</h2>
       
       {/* Player Indicators */}
       {playerIndex !== null && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="mb-4 p-3 bg-hawaii-primary/10 border border-hawaii-primary/20 rounded-lg">
           <div className="flex justify-between items-center text-sm">
-            <div className={`flex items-center space-x-2 ${playerIndex === 0 ? 'font-semibold text-blue-800' : 'text-gray-600'}`}>
-              <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+            <div className={`flex items-center space-x-2 ${playerIndex === 0 ? 'font-semibold text-hawaii-primary' : 'text-hawaii-muted'}`}>
+              <span className="w-6 h-6 bg-hawaii-primary text-white rounded-full flex items-center justify-center text-xs font-bold">
                 1
               </span>
               <span>Player 1 {playerIndex === 0 ? '(You)' : '(Opponent)'}</span>
             </div>
-            <div className={`flex items-center space-x-2 ${playerIndex === 1 ? 'font-semibold text-blue-800' : 'text-gray-600'}`}>
-              <span className="w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+            <div className={`flex items-center space-x-2 ${playerIndex === 1 ? 'font-semibold text-hawaii-primary' : 'text-hawaii-muted'}`}>
+              <span className="w-6 h-6 bg-hawaii-accent text-white rounded-full flex items-center justify-center text-xs font-bold">
                 2
               </span>
               <span>Player 2 {playerIndex === 1 ? '(You)' : '(Opponent)'}</span>
@@ -540,15 +540,15 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
       )}
       
       <div className="mb-4">
-        <p className="text-lg">Stage: <span className="font-semibold">{selectedStage}</span></p>
-        <p className="text-lg">Score: <span className="font-semibold">{player1Score} - {player2Score}</span></p>
+        <p className="text-lg text-hawaii-muted">Stage: <span className="font-semibold text-hawaii-accent">{selectedStage}</span></p>
+        <p className="text-lg text-hawaii-muted">Score: <span className="font-semibold text-hawaii-accent">{player1Score} - {player2Score}</span></p>
       </div>
 
       {/* Game Result Validation Messages */}
       {gameResultPending && pendingResult && (
-        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-yellow-800 font-semibold">Waiting for Result Confirmation</p>
-          <p className="text-yellow-700 text-sm">
+        <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+          <p className="text-yellow-600 font-semibold font-monopol">Waiting for Result Confirmation</p>
+          <p className="text-yellow-600 text-sm">
             Player {pendingResult.reportedBy + 1} reported Player {pendingResult.winner + 1} won. 
             Waiting for other player to confirm the same result.
           </p>
@@ -556,9 +556,9 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
       )}
 
       {gameResultConflict && conflictResult && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-800 font-semibold">Result Conflict Detected</p>
-          <p className="text-red-700 text-sm">
+        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+          <p className="text-red-600 font-semibold font-monopol">Result Conflict Detected</p>
+          <p className="text-red-600 text-sm">
             Player 1 reported Player {conflictResult.player1Reported + 1} won.<br/>
             Player 2 reported Player {conflictResult.player2Reported + 1} won.<br/>
             Both players must report the same result. Please discuss and report again.
@@ -570,12 +570,12 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
         <button
           onClick={() => handleGameResult(0)}
           disabled={isReportingResult}
-          className={`p-3 rounded transition-all ${
+          className={`p-3 rounded transition-all font-monopol ${
             isReportingResult
-              ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+              ? 'bg-hawaii-muted text-hawaii-muted cursor-not-allowed'
               : playerIndex === 0 
-                ? 'bg-blue-500 text-white hover:bg-blue-600' 
-                : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                ? 'bg-hawaii-primary text-white hover:bg-hawaii-accent' 
+                : 'bg-card-bg-alt text-hawaii-muted hover:bg-hawaii-accent/20 border border-hawaii-border'
           }`}
         >
           {isReportingResult ? (
@@ -590,12 +590,12 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
         <button
           onClick={() => handleGameResult(1)}
           disabled={isReportingResult}
-          className={`p-3 rounded transition-all ${
+          className={`p-3 rounded transition-all font-monopol ${
             isReportingResult
-              ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+              ? 'bg-hawaii-muted text-hawaii-muted cursor-not-allowed'
               : playerIndex === 1 
-                ? 'bg-red-500 text-white hover:bg-red-600' 
-                : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                ? 'bg-hawaii-accent text-white hover:bg-hawaii-secondary' 
+                : 'bg-card-bg-alt text-hawaii-muted hover:bg-hawaii-accent/20 border border-hawaii-border'
           }`}
         >
           {isReportingResult ? (
@@ -612,21 +612,21 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
   )
 
   const renderMatchComplete = () => (
-    <div className="bg-white rounded-lg shadow-md p-6 mb-4">
-      <h2 className="text-xl font-semibold mb-4">Match Complete!</h2>
+    <div className="bg-card-bg rounded-lg shadow-lg border border-hawaii-border p-6 mb-4">
+      <h2 className="text-xl font-semibold mb-4 text-hawaii-primary font-monopol">Match Complete!</h2>
       
       {/* Player Indicators */}
       {playerIndex !== null && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="mb-4 p-3 bg-hawaii-primary/10 border border-hawaii-primary/20 rounded-lg">
           <div className="flex justify-between items-center text-sm">
-            <div className={`flex items-center space-x-2 ${playerIndex === 0 ? 'font-semibold text-blue-800' : 'text-gray-600'}`}>
-              <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+            <div className={`flex items-center space-x-2 ${playerIndex === 0 ? 'font-semibold text-hawaii-primary' : 'text-hawaii-muted'}`}>
+              <span className="w-6 h-6 bg-hawaii-primary text-white rounded-full flex items-center justify-center text-xs font-bold">
                 1
               </span>
               <span>Player 1 {playerIndex === 0 ? '(You)' : '(Opponent)'}</span>
             </div>
-            <div className={`flex items-center space-x-2 ${playerIndex === 1 ? 'font-semibold text-blue-800' : 'text-gray-600'}`}>
-              <span className="w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+            <div className={`flex items-center space-x-2 ${playerIndex === 1 ? 'font-semibold text-hawaii-primary' : 'text-hawaii-muted'}`}>
+              <span className="w-6 h-6 bg-hawaii-accent text-white rounded-full flex items-center justify-center text-xs font-bold">
                 2
               </span>
               <span>Player 2 {playerIndex === 1 ? '(You)' : '(Opponent)'}</span>
@@ -636,22 +636,22 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
       )}
       
       <div className="text-center mb-6">
-        <p className="text-2xl font-bold mb-2">Final Score</p>
-        <p className="text-4xl font-bold text-blue-600">{player1Score} - {player2Score}</p>
+        <p className="text-2xl font-bold mb-2 text-hawaii-accent font-monopol">Final Score</p>
+        <p className="text-4xl font-bold text-hawaii-primary">{player1Score} - {player2Score}</p>
       </div>
       
       <div className="text-center">
         <p className="text-lg mb-2">
-          Winner: <span className="font-semibold text-green-600">
+          Winner: <span className="font-semibold text-hawaii-accent">
             {player1Score > player2Score ? 'Player 1' : 'Player 2'}
             {playerIndex !== null && (
-              <span className="text-sm text-gray-600 ml-2">
+              <span className="text-sm text-hawaii-muted ml-2">
                 ({player1Score > player2Score ? (playerIndex === 0 ? 'You' : 'Opponent') : (playerIndex === 1 ? 'You' : 'Opponent')})
               </span>
             )}
           </span>
         </p>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-hawaii-muted">
           Best of 3 - {Math.max(player1Score, player2Score)} games won
         </p>
       </div>
@@ -659,14 +659,14 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
   )
 
   const renderMatchEnded = () => (
-    <div className="bg-white rounded-lg shadow-md p-6 mb-4">
-      <h2 className="text-xl font-semibold mb-4 text-center">Match Ended</h2>
+    <div className="bg-card-bg rounded-lg shadow-lg border border-hawaii-border p-6 mb-4">
+      <h2 className="text-xl font-semibold mb-4 text-center text-hawaii-primary font-monopol">Match Ended</h2>
       
       <div className="text-center mb-6">
-        <p className="text-lg text-gray-600 mb-4">
+        <p className="text-lg text-hawaii-muted mb-4">
           {opponentLeft ? 'Your opponent has left the match.' : 'The match has ended.'}
         </p>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-hawaii-muted">
           You can review the chat history below or return to find a new match.
         </p>
       </div>
@@ -674,7 +674,7 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
       <div className="text-center">
         <button
           onClick={onLeaveMatch}
-          className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 transition-colors"
+          className="bg-hawaii-primary text-white px-6 py-2 rounded hover:bg-hawaii-accent transition-colors font-monopol"
         >
           Return to Free Battle
         </button>
@@ -685,11 +685,11 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto modal-scroll-container">
       <div className="min-h-screen flex items-start justify-center p-2">
-        <div className="bg-gray-100 rounded-lg shadow-xl w-full max-w-4xl my-4 modal-content">
+        <div className="bg-background rounded-lg shadow-xl w-full max-w-4xl my-4 modal-content">
           {/* Header - Fixed at top */}
-          <div className="bg-blue-600 text-white p-3 md:p-4 rounded-t-lg flex flex-col md:flex-row md:justify-between md:items-center space-y-2 md:space-y-0 sticky top-0 z-10">
+          <div className="bg-hawaii-primary text-white p-3 md:p-4 rounded-t-lg flex flex-col md:flex-row md:justify-between md:items-center space-y-2 md:space-y-0 sticky top-0 z-10">
           <div>
-            <h2 className="text-lg font-semibold">Tournament Match</h2>
+            <h2 className="text-lg font-semibold font-monopol">Tournament Match</h2>
             <p className="text-sm opacity-90">
               Opponent from {opponent.preferences.island} ({opponent.preferences.connection})
             </p>
@@ -704,14 +704,14 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
                 onClick={() => {
                   if (!opponentLeft && matchStatusState !== 'completed') setShowChat(!showChat)
                 }}
-                className={`px-2 py-1 md:px-3 md:py-1 bg-blue-500 text-white rounded text-xs md:text-sm hover:bg-blue-600 ${opponentLeft || matchStatusState === 'completed' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`px-2 py-1 md:px-3 md:py-1 bg-hawaii-accent text-white rounded text-xs md:text-sm hover:bg-hawaii-secondary transition-colors font-monopol ${opponentLeft || matchStatusState === 'completed' ? 'opacity-50 cursor-not-allowed' : ''}`}
                 disabled={opponentLeft || matchStatusState === 'completed'}
             >
               {showChat ? 'Hide Chat' : 'Show Chat'}
             </button>
             <button
               onClick={onLeaveMatch}
-                className="px-2 py-1 md:px-3 md:py-1 bg-red-500 text-white rounded text-xs md:text-sm hover:bg-red-600"
+                className="px-2 py-1 md:px-3 md:py-1 bg-red-500 text-white rounded text-xs md:text-sm hover:bg-red-600 transition-colors font-monopol"
             >
               Leave Match
             </button>
