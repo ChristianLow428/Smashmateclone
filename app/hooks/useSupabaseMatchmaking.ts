@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabaseMatchmakingService, MatchmakingPreferences } from '../services/supabase-matchmaking'
+import { matchmakingService } from '../services/matchmaking'
 
 export function useSupabaseMatchmaking() {
   const [isSearching, setIsSearching] = useState(false)
@@ -66,7 +67,7 @@ export function useSupabaseMatchmaking() {
   }, [])
 
   const sendChatMessage = useCallback(async (matchId: string, content: string) => {
-    await supabaseMatchmakingService.sendChatMessage(matchId, content)
+    matchmakingService.sendChatMessage(matchId, content)
   }, [])
 
   return {

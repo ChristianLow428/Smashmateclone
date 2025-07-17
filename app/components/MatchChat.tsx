@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
-import { supabase } from '@/utils/supabase/client'
 
 interface Message {
   id: string
@@ -30,229 +29,102 @@ interface MatchChatProps {
   }
   onLeaveMatch: () => void
   opponentLeft?: boolean
+  sendChatMessage?: (matchId: string, content: string) => Promise<void>
 }
 
-export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLeft = false }: MatchChatProps) {
+export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLeft = false, sendChatMessage }: MatchChatProps) {
   const { data: session } = useSession()
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [isConnected, setIsConnected] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const chatChannel = useRef<any>(null)
-  const pollingInterval = useRef<NodeJS.Timeout | null>(null)
-  const [usePolling, setUsePolling] = useState(false)
+  const chatWs = useRef<WebSocket | null>(null)
 
   console.log('MatchChat render:', {
     matchId,
     opponentLeft,
     messagesCount: messages.length,
     isConnected,
-    usePolling
+    hasSendChatMessage: !!sendChatMessage
   })
 
   useEffect(() => {
-    // Load existing chat messages
-    const loadMessages = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('match_chat_messages')
-          .select('*')
-          .eq('match_id', matchId)
-          .order('created_at', { ascending: true })
-
-        if (error) {
-          console.error('Error loading chat messages:', error)
-          // If there's an error loading messages, just start with empty messages
-          setMessages([])
-          return
-        }
-
-        const chatMessages = data.map(msg => ({
-          id: msg.id,
-          sender: session?.user && msg.sender_id === session.user.email
-            ? session.user.name || 'You'
-            : opponent.displayName || 'Opponent',
-          content: msg.content,
-          timestamp: new Date(msg.created_at),
-          type: 'user' as const
-        }))
-
-        // Preserve system messages when loading initial messages
-        setMessages(prev => {
-          const systemMessages = prev.filter(msg => msg.type === 'system')
-          return [...chatMessages, ...systemMessages]
-        })
-      } catch (error) {
-        console.error('Error loading messages:', error)
-        // If there's an error, just start with empty messages
-        setMessages([])
-      }
-    }
-
-    loadMessages()
-
-    // Start polling for new messages
-    const startPolling = () => {
-      console.log('Starting chat polling as fallback')
-      setUsePolling(true)
-      setIsConnected(true)
+    // Connect to WebSocket chat
+    const connectToChat = () => {
+      const wsUrl = process.env.NODE_ENV === 'development' 
+        ? `ws://localhost:3001/match/${matchId}`
+        : `wss://hawaiissbu-websocket-server.onrender.com/match/${matchId}`
       
-      pollingInterval.current = setInterval(async () => {
-      try {
-          const { data, error } = await supabase
-            .from('match_chat_messages')
-            .select('*')
-            .eq('match_id', matchId)
-            .order('created_at', { ascending: true })
-
-          if (error) {
-            console.error('Error polling chat messages:', error)
-            // Don't update messages on error, just continue polling
-            return
-          }
-
-          const chatMessages = data.map(msg => ({
-            id: msg.id,
-            sender: session?.user && msg.sender_id === session.user.email
-              ? session.user.name || 'You'
-              : opponent.displayName || 'Opponent',
-            content: msg.content,
-            timestamp: new Date(msg.created_at),
-            type: 'user' as const
-          }))
-
-          // Preserve system messages when updating from polling
-          setMessages(prev => {
-            const systemMessages = prev.filter(msg => msg.type === 'system')
-            return [...chatMessages, ...systemMessages]
-          })
-        } catch (error) {
-          console.error('Error polling messages:', error)
-          // Don't update messages on error, just continue polling
-        }
-      }, 2000) // Poll every 2 seconds
-    }
-
-    // Subscribe to new chat messages with better error handling
-    const setupChatSubscription = async () => {
-      try {
-        console.log('Setting up chat subscription for match:', matchId)
-        
-        // First, test if real-time is working at all
-        const testChannel = supabase.channel('test-connection')
-        testChannel.subscribe((status) => {
-          console.log('Test channel status:', status)
-          if (status === 'SUBSCRIBED') {
-            console.log('Real-time is working, proceeding with chat subscription')
-            supabase.removeChannel(testChannel)
-            setupActualChatSubscription()
-          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-            console.log('Real-time not available, using polling')
-            supabase.removeChannel(testChannel)
-            startPolling()
-          }
-        })
-        
-        // Timeout for test
-        setTimeout(() => {
-          if (!isConnected && !usePolling) {
-            console.log('Real-time test timeout, using polling')
-            supabase.removeChannel(testChannel)
-            startPolling()
-        }
-        }, 3000)
-
-      } catch (error) {
-        console.error('Error setting up chat subscription:', error)
-        setIsConnected(false)
-        startPolling()
+      console.log('Connecting to chat WebSocket:', wsUrl)
+      
+      chatWs.current = new WebSocket(wsUrl)
+      
+      chatWs.current.onopen = () => {
+        console.log('Chat WebSocket connected')
+        setIsConnected(true)
       }
-    }
-
-    const setupActualChatSubscription = () => {
-      try {
-        // Create a unique channel name
-        const channelName = `chat-${matchId}-${Date.now()}`
-        console.log('Using channel name:', channelName)
-        
-        chatChannel.current = supabase
-          .channel(channelName)
-          .on(
-            'postgres_changes',
-            {
-              event: 'INSERT',
-              schema: 'public',
-              table: 'match_chat_messages',
-              filter: `match_id=eq.${matchId}`
-            },
-            (payload) => {
-              console.log('Received chat message:', payload)
-              const newMessage = payload.new
-              const message: Message = {
-                id: newMessage.id,
-                sender: session?.user && newMessage.sender_id === session.user.email
-                  ? session.user.name || 'You'
-                  : opponent.displayName || 'Opponent',
-                content: newMessage.content,
-                timestamp: new Date(newMessage.created_at),
-                type: 'user'
-              }
-              setMessages(prev => [...prev, message])
+      
+      chatWs.current.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data)
+          console.log('Received chat message:', message)
+          
+          if (message.type === 'chat') {
+            const newChatMessage: Message = {
+              id: message.id,
+              sender: session?.user && message.sender === session.user.email
+                ? session.user.name || 'You'
+                : opponent.displayName || 'Opponent',
+              content: message.content,
+              timestamp: new Date(message.timestamp),
+              type: 'user'
             }
-          )
-          .subscribe((status) => {
-            console.log('Chat subscription status:', status)
-            
-            if (status === 'SUBSCRIBED') {
-              console.log('Chat subscription successful')
-              setIsConnected(true)
-              setUsePolling(false)
-              // Send a test message to verify connection
-              setTimeout(() => {
-                sendTestMessage()
-              }, 1000)
-            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-              console.error(`Chat subscription failed with status: ${status}, falling back to polling`)
-      setIsConnected(false)
-              setUsePolling(true)
-              startPolling()
-    }
-          })
-      } catch (error) {
-        console.error('Error setting up actual chat subscription:', error)
-      setIsConnected(false)
-        startPolling()
+            setMessages(prev => [...prev, newChatMessage])
+          } else if (message.type === 'chat_history') {
+            const chatMessages = message.messages.map((msg: any) => ({
+              id: msg.id,
+              sender: session?.user && msg.sender === session.user.email
+                ? session.user.name || 'You'
+                : opponent.displayName || 'Opponent',
+              content: msg.content,
+              timestamp: new Date(msg.timestamp),
+              type: 'user' as const
+            }))
+            setMessages(chatMessages)
+          }
+        } catch (error) {
+          console.error('Error parsing chat message:', error)
+        }
+      }
+      
+      chatWs.current.onerror = (error) => {
+        console.error('Chat WebSocket error:', error)
+        setIsConnected(false)
+      }
+      
+      chatWs.current.onclose = () => {
+        console.log('Chat WebSocket closed')
+        setIsConnected(false)
       }
     }
 
-    setupChatSubscription()
+    connectToChat()
 
     return () => {
-      console.log('Cleaning up chat subscription')
-      if (chatChannel.current) {
-        supabase.removeChannel(chatChannel.current)
-      }
-      if (pollingInterval.current) {
-        clearInterval(pollingInterval.current)
+      if (chatWs.current) {
+        chatWs.current.close()
       }
     }
-  }, [matchId, session?.user?.email, session?.user?.name])
+  }, [matchId, session, opponent.displayName])
 
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    // Auto-scroll to bottom when new messages arrive
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
   // Add system message when opponent leaves
   useEffect(() => {
-    console.log('opponentLeft useEffect triggered:', {
-      opponentLeft,
-      currentMessagesCount: messages.length,
-      matchId
-    })
-    
     if (opponentLeft) {
-      console.log('Adding system message for opponent left')
       const systemMessage: Message = {
         id: `system-${Date.now()}`,
         sender: 'System',
@@ -276,7 +148,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
       sessionEmail: session?.user?.email,
       opponentLeft,
       isConnected,
-      usePolling
+      hasSendChatMessage: !!sendChatMessage
     })
     
     if (!newMessage.trim()) {
@@ -300,22 +172,28 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
     }
 
     try {
-      console.log('Attempting to send message to database')
-      const { error } = await supabase
-        .from('match_chat_messages')
-        .insert({
-          match_id: matchId,
-          sender_id: session.user.email,
-          content: newMessage.trim()
-        })
-
-      if (error) {
-        console.error('Error sending message:', error)
+      if (sendChatMessage) {
+        // Use the passed sendChatMessage function (WebSocket)
+        console.log('Using WebSocket sendChatMessage')
+        await sendChatMessage(matchId, newMessage.trim())
+      } else if (chatWs.current && chatWs.current.readyState === WebSocket.OPEN) {
+        // Fallback to direct WebSocket
+        console.log('Using direct WebSocket')
+        const chatMessage = {
+          type: 'chat',
+          matchId,
+          sender: session.user.email,
+          content: newMessage.trim(),
+          timestamp: new Date().toISOString()
+        }
+        chatWs.current.send(JSON.stringify(chatMessage))
+      } else {
+        console.log('No chat method available')
         return
       }
 
       console.log('Message sent successfully')
-    setNewMessage('')
+      setNewMessage('')
     } catch (error) {
       console.error('Error sending message:', error)
     }
@@ -339,19 +217,19 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
     if (!session?.user?.email) return
     
     try {
-      const { error } = await supabase
-        .from('match_chat_messages')
-        .insert({
-          match_id: matchId,
-          sender_id: session.user.email,
-          content: 'Test message - chat connection working!'
-        })
-
-      if (error) {
-        console.error('Error sending test message:', error)
-      } else {
-        console.log('Test message sent successfully')
+      if (sendChatMessage) {
+        await sendChatMessage(matchId, 'Test message - chat connection working!')
+      } else if (chatWs.current && chatWs.current.readyState === WebSocket.OPEN) {
+        const chatMessage = {
+          type: 'chat',
+          matchId,
+          sender: session.user.email,
+          content: 'Test message - chat connection working!',
+          timestamp: new Date().toISOString()
+        }
+        chatWs.current.send(JSON.stringify(chatMessage))
       }
+      console.log('Test message sent successfully')
     } catch (error) {
       console.error('Error sending test message:', error)
     }
@@ -379,7 +257,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
         <div className="flex items-center space-x-1">
           <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
             <span className="text-xs">
-              {isConnected ? (usePolling ? 'Polling' : 'Connected') : 'Disconnected'}
+              {isConnected ? 'WebSocket' : 'Disconnected'}
             </span>
           </div>
         </div>

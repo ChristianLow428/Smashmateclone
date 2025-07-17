@@ -26,6 +26,7 @@ interface TournamentMatchProps {
   banStage: (matchId: string, stage: string) => Promise<void>
   pickStage: (matchId: string, stage: string) => Promise<void>
   reportGameResult: (matchId: string, winner: number) => Promise<void>
+  sendChatMessage?: (matchId: string, content: string) => Promise<void>
   matchStatus: any // Pass matchStatus as prop instead of callback
   matchEnded?: boolean
 }
@@ -64,7 +65,7 @@ const CHARACTERS = [
   'Kazuya', 'Sora'
 ]
 
-export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playerIndex, selectCharacter, banStage, pickStage, reportGameResult, matchStatus, matchEnded }: TournamentMatchProps) {
+export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playerIndex, selectCharacter, banStage, pickStage, reportGameResult, sendChatMessage, matchStatus, matchEnded }: TournamentMatchProps) {
   const { data: session } = useSession()
   const [matchStatusState, setMatchStatusState] = useState<MatchStatus>('character_selection')
   const [selectedCharacter, setSelectedCharacter] = useState<string>('')
@@ -735,7 +736,8 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
                 matchId={matchId}
                 opponent={opponent}
                 onLeaveMatch={onLeaveMatch}
-                    opponentLeft={opponentLeft}
+                opponentLeft={opponentLeft}
+                sendChatMessage={sendChatMessage}
               />
             </div>
           )}

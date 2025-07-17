@@ -292,6 +292,22 @@ class MatchmakingService {
     this.ws.send(JSON.stringify(message))
   }
 
+  public sendChatMessage(matchId: string, content: string) {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      console.log('WebSocket not ready, cannot send chat message')
+      return
+    }
+
+    const message = {
+      type: 'chat',
+      matchId,
+      content
+    }
+
+    console.log('Sending chat message:', message)
+    this.ws.send(JSON.stringify(message))
+  }
+
   public sendReady(matchId: string) {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       return

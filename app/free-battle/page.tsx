@@ -373,6 +373,7 @@ export default function FreeBattle() {
           banStage={banStage}
           pickStage={pickStage}
           reportGameResult={reportGameResult}
+          sendChatMessage={sendChatMessage}
           matchStatus={matchStatus}
           matchEnded={matchEnded}
         />

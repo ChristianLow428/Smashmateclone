@@ -517,6 +517,7 @@ export default function RatingBattle() {
                 banStage={handleBanStage}
                 pickStage={handlePickStage}
                 reportGameResult={handleReportGameResult}
+                sendChatMessage={sendChatMessage}
                 matchStatus={matchStatus}
                 matchEnded={matchEnded}
               />

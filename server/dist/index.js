@@ -1,8 +1,42 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 const ws_1 = require("ws");
 const http_1 = require("http");
 const uuid_1 = require("uuid");
+const supabase_js_1 = require("@supabase/supabase-js");
 // Hawaii Smash Ultimate Starter Stages
 const STARTER_STAGES = [
     'Battlefield',
@@ -648,59 +682,137 @@ class MatchmakingServer {
                 console.error('Missing user emails for rating match:', { player1Email, player2Email });
                 return;
             }
-            // Call the rating battle API to process the match result
-            // Use the correct production URL
-            const apiUrl = process.env.NODE_ENV === 'production'
-                ? 'https://hawaiissbu.onrender.com/api/matchmaking/process-rating-result'
-                : `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/matchmaking/process-rating-result`;
-            const requestBody = {
-                player1Id: player1Email,
-                player2Id: player2Email,
-                matchId: matchData.id,
-                winner
-            };
-            console.log(`Calling rating API: ${apiUrl}`);
-            console.log(`Request body:`, requestBody);
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(requestBody)
-            });
-            console.log(`API response status: ${response.status}`);
-            if (response.ok) {
-                const result = await response.json();
-                console.log('Rating match result processed successfully:', result);
-                // Send rating updates to both players
-                matchData.players.forEach((player, index) => {
-                    this.sendMessage(player.ws, {
-                        type: 'rating_update',
-                        playerId: player.userEmail || player.id,
-                        newRating: index === 0 ? result.player1NewRating : result.player2NewRating,
-                        ratingChange: index === 0 ? result.player1RatingChange : result.player2RatingChange
-                    });
-                });
-                // Send match result processed notification
-                matchData.players.forEach(player => {
-                    this.sendMessage(player.ws, {
-                        type: 'match_result_processed',
-                        matchId: matchData.id,
-                        player1Id: player1Email,
-                        player2Id: player2Email,
-                        winner,
-                        player1NewRating: result.player1NewRating,
-                        player2NewRating: result.player2NewRating,
-                        player1RatingChange: result.player1RatingChange,
-                        player2RatingChange: result.player2RatingChange
-                    });
-                });
+            // Import the rating calculation functions
+            const { calculateELOChange, calculateExpectedWinRate, calculateAdjustedKFactor } = await Promise.resolve().then(() => __importStar(require('./rating-calculations')));
+            // Get current ratings from the database
+            const supabase = (0, supabase_js_1.createClient)(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+            // Get current ratings
+            const { data: player1Data } = await supabase
+                .from('player_ratings')
+                .select('*')
+                .eq('player_id', player1Email)
+                .single();
+            const { data: player2Data } = await supabase
+                .from('player_ratings')
+                .select('*')
+                .eq('player_id', player2Email)
+                .single();
+            const player1CurrentRating = player1Data?.rating || 1000;
+            const player2CurrentRating = player2Data?.rating || 1000;
+            const player1GamesPlayed = player1Data?.games_played || 0;
+            const player2GamesPlayed = player2Data?.games_played || 0;
+            console.log(`Current ratings - Player1: ${player1CurrentRating}, Player2: ${player2CurrentRating}`);
+            // Calculate rating changes
+            const player1KFactor = calculateAdjustedKFactor(player1CurrentRating, player2CurrentRating, player1GamesPlayed);
+            const player2KFactor = calculateAdjustedKFactor(player2CurrentRating, player1CurrentRating, player2GamesPlayed);
+            const player1Result = winner === 0 ? 'win' : 'loss';
+            const player2Result = winner === 1 ? 'win' : 'loss';
+            const player1RatingChange = calculateELOChange(player1CurrentRating, player2CurrentRating, player1Result, player1GamesPlayed, player1KFactor);
+            const player2RatingChange = calculateELOChange(player2CurrentRating, player1CurrentRating, player2Result, player2GamesPlayed, player2KFactor);
+            const player1NewRating = Math.max(100, player1CurrentRating + player1RatingChange);
+            const player2NewRating = Math.max(100, player2CurrentRating + player2RatingChange);
+            console.log(`Rating changes - Player1: ${player1RatingChange} (${player1CurrentRating} -> ${player1NewRating}), Player2: ${player2RatingChange} (${player2CurrentRating} -> ${player2NewRating})`);
+            // Update player 1 rating
+            if (player1Data) {
+                await supabase
+                    .from('player_ratings')
+                    .update({
+                    rating: player1NewRating,
+                    games_played: player1GamesPlayed + 1,
+                    wins: player1Data.wins + (player1Result === 'win' ? 1 : 0),
+                    losses: player1Data.losses + (player1Result === 'loss' ? 1 : 0)
+                })
+                    .eq('player_id', player1Email);
             }
             else {
-                console.error('Failed to process rating match result:', response.status, response.statusText);
-                const errorText = await response.text();
-                console.error('Error response:', errorText);
+                await supabase
+                    .from('player_ratings')
+                    .insert({
+                    player_id: player1Email,
+                    rating: player1NewRating,
+                    games_played: 1,
+                    wins: player1Result === 'win' ? 1 : 0,
+                    losses: player1Result === 'loss' ? 1 : 0
+                });
             }
+            // Update player 2 rating
+            if (player2Data) {
+                await supabase
+                    .from('player_ratings')
+                    .update({
+                    rating: player2NewRating,
+                    games_played: player2GamesPlayed + 1,
+                    wins: player2Data.wins + (player2Result === 'win' ? 1 : 0),
+                    losses: player2Data.losses + (player2Result === 'loss' ? 1 : 0)
+                })
+                    .eq('player_id', player2Email);
+            }
+            else {
+                await supabase
+                    .from('player_ratings')
+                    .insert({
+                    player_id: player2Email,
+                    rating: player2NewRating,
+                    games_played: 1,
+                    wins: player2Result === 'win' ? 1 : 0,
+                    losses: player2Result === 'loss' ? 1 : 0
+                });
+            }
+            // Add rating history (optional)
+            try {
+                await supabase.from('rating_history').insert([
+                    {
+                        player_id: player1Email,
+                        match_id: matchData.id,
+                        old_rating: player1CurrentRating,
+                        new_rating: player1NewRating,
+                        rating_change: player1RatingChange,
+                        opponent_id: player2Email,
+                        opponent_old_rating: player2CurrentRating,
+                        opponent_new_rating: player2NewRating,
+                        result: player1Result
+                    },
+                    {
+                        player_id: player2Email,
+                        match_id: matchData.id,
+                        old_rating: player2CurrentRating,
+                        new_rating: player2NewRating,
+                        rating_change: player2RatingChange,
+                        opponent_id: player1Email,
+                        opponent_old_rating: player1CurrentRating,
+                        opponent_new_rating: player1NewRating,
+                        result: player2Result
+                    }
+                ]);
+            }
+            catch (historyError) {
+                console.error('Error adding rating history:', historyError);
+                // Don't fail the whole process for history
+            }
+            console.log('Rating match result processed successfully');
+            // Send rating updates to both players
+            matchData.players.forEach((player, index) => {
+                this.sendMessage(player.ws, {
+                    type: 'rating_update',
+                    playerId: player.userEmail || player.id,
+                    newRating: index === 0 ? player1NewRating : player2NewRating,
+                    ratingChange: index === 0 ? player1RatingChange : player2RatingChange
+                });
+            });
+            // Send match result processed notification
+            matchData.players.forEach(player => {
+                this.sendMessage(player.ws, {
+                    type: 'match_result_processed',
+                    matchId: matchData.id,
+                    player1Id: player1Email,
+                    player2Id: player2Email,
+                    winner,
+                    player1NewRating,
+                    player2NewRating,
+                    player1RatingChange,
+                    player2RatingChange
+                });
+            });
         }
         catch (error) {
             console.error('Error processing rating match result:', error);

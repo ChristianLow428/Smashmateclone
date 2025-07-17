@@ -114,8 +114,8 @@ export function useRatingBattle() {
   }, [])
 
   const sendChatMessage = useCallback(async (matchId: string, content: string) => {
-    // WebSocket chat is handled through the WebSocket
-    console.log('Rating battle chat message:', content)
+    // Send chat message through WebSocket
+    ratingBattleService.sendChatMessage(matchId, content)
   }, [])
 
   return {

@@ -265,6 +265,22 @@ class RatingBattleService {
     this.ws.send(JSON.stringify(message))
   }
 
+  public sendChatMessage(matchId: string, content: string) {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      console.log('WebSocket not ready, cannot send chat message')
+      return
+    }
+
+    const message = {
+      type: 'chat',
+      matchId,
+      content
+    }
+
+    console.log('Sending chat message:', message)
+    this.ws.send(JSON.stringify(message))
+  }
+
   public onMatch(callback: (matchId: string) => void) {
     this.onMatchCallback = callback
   }
