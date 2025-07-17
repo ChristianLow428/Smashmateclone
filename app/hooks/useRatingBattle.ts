@@ -118,6 +118,10 @@ export function useRatingBattle() {
     ratingBattleService.sendChatMessage(matchId, content)
   }, [])
 
+  const onChatMessage = useCallback((callback: (message: any) => void) => {
+    ratingBattleService.onChatMessage(callback)
+  }, [])
+
   return {
     isSearching,
     currentMatch,
@@ -132,6 +136,7 @@ export function useRatingBattle() {
     reportGameResult,
     resetPlayerStatus,
     sendChatMessage,
+    onChatMessage,
     useWebSocket // Expose this for debugging
   }
 } 

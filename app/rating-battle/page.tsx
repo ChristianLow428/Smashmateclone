@@ -150,6 +150,7 @@ export default function RatingBattle() {
     pickStage,
     reportGameResult,
     sendChatMessage,
+    onChatMessage,
     useWebSocket,
     resetPlayerStatus
   } = useRatingBattle()
@@ -518,6 +519,7 @@ export default function RatingBattle() {
                 pickStage={handlePickStage}
                 reportGameResult={handleReportGameResult}
                 sendChatMessage={sendChatMessage}
+                onChatMessage={onChatMessage}
                 matchStatus={matchStatus}
                 matchEnded={matchEnded}
               />

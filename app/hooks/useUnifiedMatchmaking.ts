@@ -198,10 +198,27 @@ export function useUnifiedMatchmaking() {
 
   const sendChatMessage = useCallback(async (matchId: string, content: string) => {
     if (useWebSocket) {
-      // WebSocket chat is handled through the WebSocket
-      console.log('Chat message:', content)
+      try {
+        const { matchmakingService } = await import('../services/matchmaking')
+        matchmakingService.sendChatMessage(matchId, content)
+      } catch (error) {
+        console.error('Error sending chat message:', error)
+      }
     } else {
       await supabaseMatchmakingService.sendChatMessage(matchId, content)
+    }
+  }, [useWebSocket])
+
+  const onChatMessage = useCallback((callback: (message: any) => void) => {
+    if (useWebSocket) {
+      import('../services/matchmaking').then(({ matchmakingService }) => {
+        matchmakingService.onChatMessage(callback)
+      }).catch((error) => {
+        console.error('Failed to set up chat message callback:', error)
+      })
+    } else {
+      // Supabase doesn't have chat message callback
+      console.warn('Chat messages not supported in Supabase mode')
     }
   }, [useWebSocket])
 
@@ -219,6 +236,7 @@ export function useUnifiedMatchmaking() {
     reportGameResult,
     resetPlayerStatus,
     sendChatMessage,
+    onChatMessage,
     useWebSocket // Expose this for debugging
   }
 } 

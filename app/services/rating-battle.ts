@@ -42,6 +42,7 @@ class RatingBattleService {
   private onMatchCallback: ((matchId: string) => void) | null = null
   private onErrorCallback: ((error: string) => void) | null = null
   private onMatchStatusCallback: ((status: any) => void) | null = null
+  private onChatMessageCallback: ((message: any) => void) | null = null
   private isConnecting: boolean = false
   private reconnectTimeout: NodeJS.Timeout | null = null
 
@@ -117,6 +118,12 @@ class RatingBattleService {
         } else if (message.type === 'rating_update') {
           console.log('Rating update message received:', message)
           this.onMatchStatusCallback?.(message)
+        } else if (message.type === 'chat') {
+          console.log('Chat message received:', message)
+          this.onChatMessageCallback?.(message)
+        } else if (message.type === 'chat_history') {
+          console.log('Chat history received:', message)
+          this.onChatMessageCallback?.(message)
         } else if (message.type === 'match_result_processed') {
           console.log('Match result processed message received:', message)
           this.onMatchStatusCallback?.(message)
@@ -291,6 +298,10 @@ class RatingBattleService {
 
   public onMatchStatus(callback: (status: any) => void) {
     this.onMatchStatusCallback = callback
+  }
+
+  public onChatMessage(callback: (message: any) => void) {
+    this.onChatMessageCallback = callback
   }
 
   public disconnect() {

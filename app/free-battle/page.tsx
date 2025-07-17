@@ -70,6 +70,7 @@ export default function FreeBattle() {
     pickStage,
     reportGameResult,
     sendChatMessage,
+    onChatMessage,
     useWebSocket,
     resetPlayerStatus
   } = useUnifiedMatchmaking()
@@ -364,19 +365,20 @@ export default function FreeBattle() {
 
       {/* Match Chat Modal */}
       {(currentMatch && opponent) || (matchEnded && opponent) ? (
-        <TournamentMatch
-          matchId={currentMatch || 'ended'}
-          opponent={opponent}
-          onLeaveMatch={handleLeaveMatch}
-          playerIndex={playerIndex}
-          selectCharacter={selectCharacter}
-          banStage={banStage}
-          pickStage={pickStage}
-          reportGameResult={reportGameResult}
-          sendChatMessage={sendChatMessage}
-          matchStatus={matchStatus}
-          matchEnded={matchEnded}
-        />
+                      <TournamentMatch
+                matchId={currentMatch || 'ended'}
+                opponent={opponent}
+                onLeaveMatch={handleLeaveMatch}
+                playerIndex={playerIndex}
+                selectCharacter={selectCharacter}
+                banStage={banStage}
+                pickStage={pickStage}
+                reportGameResult={reportGameResult}
+                sendChatMessage={sendChatMessage}
+                onChatMessage={onChatMessage}
+                matchStatus={matchStatus}
+                matchEnded={matchEnded}
+              />
       ) : null}
     </main>
   )

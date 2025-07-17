@@ -30,92 +30,24 @@ interface MatchChatProps {
   onLeaveMatch: () => void
   opponentLeft?: boolean
   sendChatMessage?: (matchId: string, content: string) => Promise<void>
+  onChatMessage?: (message: any) => void
 }
 
-export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLeft = false, sendChatMessage }: MatchChatProps) {
+export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLeft = false, sendChatMessage, onChatMessage }: MatchChatProps) {
   const { data: session } = useSession()
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
-  const [isConnected, setIsConnected] = useState(false)
+  const [isConnected, setIsConnected] = useState(true) // Assume connected since we're using the main WebSocket
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const chatWs = useRef<WebSocket | null>(null)
 
   console.log('MatchChat render:', {
     matchId,
     opponentLeft,
     messagesCount: messages.length,
     isConnected,
-    hasSendChatMessage: !!sendChatMessage
+    hasSendChatMessage: !!sendChatMessage,
+    hasOnChatMessage: !!onChatMessage
   })
-
-  useEffect(() => {
-    // Connect to WebSocket chat
-    const connectToChat = () => {
-      const wsUrl = process.env.NODE_ENV === 'development' 
-        ? `ws://localhost:3001/match/${matchId}`
-        : `wss://hawaiissbu-websocket-server.onrender.com/match/${matchId}`
-      
-      console.log('Connecting to chat WebSocket:', wsUrl)
-      
-      chatWs.current = new WebSocket(wsUrl)
-      
-      chatWs.current.onopen = () => {
-        console.log('Chat WebSocket connected')
-        setIsConnected(true)
-      }
-      
-      chatWs.current.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data)
-          console.log('Received chat message:', message)
-          
-          if (message.type === 'chat') {
-            const newChatMessage: Message = {
-              id: message.id,
-              sender: session?.user && message.sender === session.user.email
-                ? session.user.name || 'You'
-                : opponent.displayName || 'Opponent',
-              content: message.content,
-              timestamp: new Date(message.timestamp),
-              type: 'user'
-            }
-            setMessages(prev => [...prev, newChatMessage])
-          } else if (message.type === 'chat_history') {
-            const chatMessages = message.messages.map((msg: any) => ({
-              id: msg.id,
-              sender: session?.user && msg.sender === session.user.email
-                ? session.user.name || 'You'
-                : opponent.displayName || 'Opponent',
-              content: msg.content,
-              timestamp: new Date(msg.timestamp),
-              type: 'user' as const
-            }))
-            setMessages(chatMessages)
-          }
-        } catch (error) {
-          console.error('Error parsing chat message:', error)
-        }
-      }
-      
-      chatWs.current.onerror = (error) => {
-        console.error('Chat WebSocket error:', error)
-        setIsConnected(false)
-      }
-      
-      chatWs.current.onclose = () => {
-        console.log('Chat WebSocket closed')
-        setIsConnected(false)
-      }
-    }
-
-    connectToChat()
-
-    return () => {
-      if (chatWs.current) {
-        chatWs.current.close()
-      }
-    }
-  }, [matchId, session, opponent.displayName])
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -142,12 +74,47 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
     }
   }, [opponentLeft, matchId])
 
+  // Listen for chat messages from the parent component
+  useEffect(() => {
+    if (onChatMessage) {
+      const handleChatMessage = (message: any) => {
+        console.log('MatchChat received chat message:', message)
+        
+        if (message.type === 'chat') {
+          const newChatMessage: Message = {
+            id: message.id,
+            sender: session?.user && message.sender === session.user.email
+              ? session.user.name || 'You'
+              : opponent.displayName || 'Opponent',
+            content: message.content,
+            timestamp: new Date(message.timestamp),
+            type: 'user'
+          }
+          setMessages(prev => [...prev, newChatMessage])
+        } else if (message.type === 'chat_history') {
+          const chatMessages = message.messages.map((msg: any) => ({
+            id: msg.id,
+            sender: session?.user && msg.sender === session.user.email
+              ? session.user.name || 'You'
+              : opponent.displayName || 'Opponent',
+            content: msg.content,
+            timestamp: new Date(msg.timestamp),
+            type: 'user' as const
+          }))
+          setMessages(chatMessages)
+        }
+      }
+
+      // Set up the callback
+      onChatMessage(handleChatMessage)
+    }
+  }, [onChatMessage, session, opponent.displayName])
+
   const sendMessage = async () => {
     console.log('sendMessage called:', {
       newMessage: newMessage.trim(),
       sessionEmail: session?.user?.email,
       opponentLeft,
-      isConnected,
       hasSendChatMessage: !!sendChatMessage
     })
     
@@ -165,28 +132,22 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
       console.log('Opponent left, not sending')
       return
     }
-    
-    if (!isConnected) {
-      console.log('Not connected, not sending')
-      return
-    }
 
     try {
       if (sendChatMessage) {
         // Use the passed sendChatMessage function (WebSocket)
         console.log('Using WebSocket sendChatMessage')
         await sendChatMessage(matchId, newMessage.trim())
-      } else if (chatWs.current && chatWs.current.readyState === WebSocket.OPEN) {
-        // Fallback to direct WebSocket
-        console.log('Using direct WebSocket')
-        const chatMessage = {
-          type: 'chat',
-          matchId,
-          sender: session.user.email,
+        
+        // Add the message to local state immediately for better UX
+        const localMessage: Message = {
+          id: `local-${Date.now()}`,
+          sender: session.user.name || 'You',
           content: newMessage.trim(),
-          timestamp: new Date().toISOString()
+          timestamp: new Date(),
+          type: 'user'
         }
-        chatWs.current.send(JSON.stringify(chatMessage))
+        setMessages(prev => [...prev, localMessage])
       } else {
         console.log('No chat method available')
         return
@@ -213,28 +174,6 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
     }
   }
 
-  const sendTestMessage = async () => {
-    if (!session?.user?.email) return
-    
-    try {
-      if (sendChatMessage) {
-        await sendChatMessage(matchId, 'Test message - chat connection working!')
-      } else if (chatWs.current && chatWs.current.readyState === WebSocket.OPEN) {
-        const chatMessage = {
-          type: 'chat',
-          matchId,
-          sender: session.user.email,
-          content: 'Test message - chat connection working!',
-          timestamp: new Date().toISOString()
-        }
-        chatWs.current.send(JSON.stringify(chatMessage))
-      }
-      console.log('Test message sent successfully')
-    } catch (error) {
-      console.error('Error sending test message:', error)
-    }
-  }
-
   return (
     <div className="bg-card-bg rounded-lg shadow-lg border border-hawaii-border h-full flex flex-col">
       {/* Header */}
@@ -246,20 +185,11 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
             {opponentLeft && <span className="text-red-200 ml-1 font-semibold">• OPPONENT LEFT</span>}
           </p>
         </div>
-        <div className="flex items-center space-x-1 md:space-x-2">
-          <button
-            onClick={sendTestMessage}
-            className="px-1 md:px-2 py-1 bg-hawaii-accent text-white rounded text-xs hover:bg-hawaii-secondary transition-colors"
-            title="Send test message"
-          >
-            Test
-          </button>
         <div className="flex items-center space-x-1">
           <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
-            <span className="text-xs">
-              {isConnected ? 'WebSocket' : 'Disconnected'}
-            </span>
-          </div>
+          <span className="text-xs">
+            {isConnected ? 'Connected' : 'Disconnected'}
+          </span>
         </div>
       </div>
 

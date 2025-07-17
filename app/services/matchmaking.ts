@@ -55,6 +55,7 @@ class MatchmakingService {
   private onMatchCallback: ((matchId: string) => void) | null = null
   private onErrorCallback: ((error: string) => void) | null = null
   private onMatchStatusCallback: ((status: MatchmakingMessage) => void) | null = null
+  private onChatMessageCallback: ((message: any) => void) | null = null
   private isConnecting: boolean = false
   private reconnectTimeout: NodeJS.Timeout | null = null
 
@@ -141,6 +142,12 @@ class MatchmakingService {
         } else if (message.type === 'game_result_conflict') {
           console.log('Game result conflict message received:', message)
           this.onMatchStatusCallback?.(message)
+        } else if (message.type === 'chat') {
+          console.log('Chat message received:', message)
+          this.onChatMessageCallback?.(message)
+        } else if (message.type === 'chat_history') {
+          console.log('Chat history received:', message)
+          this.onChatMessageCallback?.(message)
         } else if (message.type === 'error') {
           console.log('Error message received:', message)
           this.onErrorCallback?.(message.error)
@@ -331,6 +338,10 @@ class MatchmakingService {
 
   public onMatchStatus(callback: (status: MatchmakingMessage) => void) {
     this.onMatchStatusCallback = callback
+  }
+
+  public onChatMessage(callback: (message: any) => void) {
+    this.onChatMessageCallback = callback
   }
 
   public disconnect() {
