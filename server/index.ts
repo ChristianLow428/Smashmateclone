@@ -801,35 +801,39 @@ class MatchmakingServer {
         return
       }
       
-              // Call the rating battle API to process the match result
-        const apiUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/matchmaking/process-rating-result`
-        const requestBody = {
-          player1Id: player1Email,
-          player2Id: player2Email,
-          matchId: matchData.id,
-          winner
-        }
-        
-        console.log(`Calling rating API: ${apiUrl}`)
-        console.log(`Request body:`, requestBody)
-        
-        const response = await fetch(apiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(requestBody)
-        })
+      // Call the rating battle API to process the match result
+      // Use the correct production URL
+      const apiUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://hawaiissbu.onrender.com/api/matchmaking/process-rating-result'
+        : `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/matchmaking/process-rating-result`
       
-              console.log(`API response status: ${response.status}`)
-        if (response.ok) {
-          const result = await response.json() as {
-            player1NewRating: number
-            player2NewRating: number
-            player1RatingChange: number
-            player2RatingChange: number
-          }
-          console.log('Rating match result processed successfully:', result)
+      const requestBody = {
+        player1Id: player1Email,
+        player2Id: player2Email,
+        matchId: matchData.id,
+        winner
+      }
+      
+      console.log(`Calling rating API: ${apiUrl}`)
+      console.log(`Request body:`, requestBody)
+      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      })
+      
+      console.log(`API response status: ${response.status}`)
+      if (response.ok) {
+        const result = await response.json() as {
+          player1NewRating: number
+          player2NewRating: number
+          player1RatingChange: number
+          player2RatingChange: number
+        }
+        console.log('Rating match result processed successfully:', result)
         
         // Send rating updates to both players
         matchData.players.forEach((player, index) => {
@@ -857,6 +861,8 @@ class MatchmakingServer {
         })
       } else {
         console.error('Failed to process rating match result:', response.status, response.statusText)
+        const errorText = await response.text()
+        console.error('Error response:', errorText)
       }
     } catch (error) {
       console.error('Error processing rating match result:', error)
