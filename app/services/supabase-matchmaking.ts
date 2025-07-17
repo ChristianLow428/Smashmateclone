@@ -431,6 +431,18 @@ class SupabaseMatchmakingService {
           return
         }
 
+        // Get opponent's display name from profiles table
+        const { data: opponentProfile } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('email', opponentId)
+          .single()
+
+        const opponentWithName = {
+          ...opponent,
+          displayName: opponentProfile?.name || opponentId
+        }
+
         // Determine player index
         const playerIndex = match.player1_id === this.currentPlayerId ? 0 : 1
 
@@ -458,7 +470,7 @@ class SupabaseMatchmakingService {
           player1Character: match.character_selection?.player1Character,
           player2Character: match.character_selection?.player2Character,
           playerIndex: playerIndex,
-          opponent: opponent // Include opponent information
+          opponent: opponentWithName // Include opponent information
         })
       } else {
         console.log('No active match found for player')
@@ -556,6 +568,18 @@ class SupabaseMatchmakingService {
       .eq('id', opponentId)
       .single()
 
+    // Get opponent's display name from profiles table
+    const { data: opponentProfile } = await supabase
+      .from('profiles')
+      .select('name')
+      .eq('email', opponentId)
+      .single()
+
+    const opponentWithName = {
+      ...opponent,
+      displayName: opponentProfile?.name || opponentId
+    }
+
     // Send match status update
     const statusUpdate = {
       type: 'match_state',
@@ -572,7 +596,7 @@ class SupabaseMatchmakingService {
       player1Character: match.character_selection?.player1Character,
       player2Character: match.character_selection?.player2Character,
       playerIndex: playerIndex, // Add player index to the status update
-      opponent: opponent // Include opponent information
+      opponent: opponentWithName // Include opponent information
     }
 
     console.log('Sending status update to UI:', statusUpdate)

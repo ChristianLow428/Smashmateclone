@@ -19,6 +19,7 @@ interface MatchPreferences {
 
 interface Opponent {
   id: string
+  displayName?: string
   preferences: {
     island: string
     connection: 'wired' | 'wireless'

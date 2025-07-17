@@ -40,19 +40,6 @@ if (!supabaseAnonKey) {
     console.error('Supabase auth error:', error)
   } else {
     console.log('Supabase client initialized successfully')
-        
-        // Test real-time connection
-        const testChannel = supabaseClient!.channel('test-realtime')
-        testChannel.subscribe((status) => {
-          console.log('Real-time test status:', status)
-          if (status === 'SUBSCRIBED') {
-            console.log('Real-time is working properly')
-            supabaseClient!.removeChannel(testChannel)
-          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-            console.warn('Real-time may not be properly configured')
-            supabaseClient!.removeChannel(testChannel)
-  }
-        })
       }
     })
   }

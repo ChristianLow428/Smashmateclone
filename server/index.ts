@@ -3,6 +3,7 @@ import { createServer } from 'http'
 import { v4 as uuidv4 } from 'uuid'
 import type { WebSocket as ServerWebSocket } from 'ws'
 
+
 interface Player {
   id: string
   ws: ServerWebSocket
@@ -17,6 +18,7 @@ interface Player {
     }
   }
   rating?: number
+  userEmail?: string
   matchId?: string
   character?: string
   isReady?: boolean
@@ -31,6 +33,7 @@ interface Match {
   currentGame: number
   player1Score: number
   player2Score: number
+  isRatingMatch: boolean
   stageStriking: {
     currentPlayer: number // 0 or 1
     strikesRemaining: number
@@ -202,8 +205,17 @@ class MatchmakingServer {
       case 'cancel':
         this.handleCancel(playerId)
         break
+      case 'rating_search':
+        this.handleRatingSearch(playerId, ws, message)
+        break
+      case 'cancel_rating_search':
+        this.handleCancelRatingSearch(playerId)
+        break
       case 'leave_match':
         this.handleLeaveMatch(playerId, message.matchId)
+        break
+      case 'leave_rating_match':
+        this.handleLeaveRatingMatch(playerId, message.matchId)
         break
       case 'select_character':
         this.handleCharacterSelection(playerId, message.matchId, message.character)
@@ -218,7 +230,8 @@ class MatchmakingServer {
         this.handleGameResult(playerId, message.matchId, message.winner)
         break
       default:
-        this.sendError(ws, 'Unknown message type')
+        console.log('Unknown message type:', message.type)
+        this.sendError(ws, `Unknown message type: ${message.type}`)
     }
   }
 
@@ -288,6 +301,37 @@ class MatchmakingServer {
       this.players.delete(playerId)
       console.log(`Player ${playerId} removed from search queue`)
     }
+  }
+
+  private handleRatingSearch(playerId: string, ws: ServerWebSocket, message: any) {
+    console.log(`Player ${playerId} starting rating search with message:`, message)
+    
+    const player: Player = {
+      id: playerId,
+      ws,
+      preferences: message.preferences,
+      rating: 1000, // Default rating for new players
+      userEmail: message.userEmail
+    }
+    this.players.set(playerId, player)
+    this.searchQueue.push(player)
+    
+    console.log('=== RATING SEARCH DEBUG ===')
+    console.log(`Player ${playerId} (${message.userEmail}) added to rating search queue. Queue size: ${this.searchQueue.length}`)
+    console.log('Debug - player.userEmail type:', typeof player.userEmail, 'value:', player.userEmail)
+    console.log('=== END RATING SEARCH DEBUG ===')
+    
+    this.tryMatchPlayers()
+  }
+
+  private handleCancelRatingSearch(playerId: string) {
+    console.log(`Player ${playerId} cancelled rating search`)
+    this.handleCancel(playerId)
+  }
+
+  private handleLeaveRatingMatch(playerId: string, matchId: string) {
+    console.log(`Player ${playerId} leaving rating match ${matchId}`)
+    this.handleLeaveMatch(playerId, matchId)
   }
 
   private handleDisconnect(playerId: string) {
@@ -447,7 +491,19 @@ class MatchmakingServer {
     const actualPlayer1 = isPlayer1First ? player1 : player2
     const actualPlayer2 = isPlayer1First ? player2 : player1
     
-    console.log(`Randomizing player order: ${actualPlayer1.id} is Player 1, ${actualPlayer2.id} is Player 2`)
+    // LOGGING: Show userEmail and isRatingMatch
+    const isRatingMatch = !!actualPlayer1.userEmail && !!actualPlayer2.userEmail
+    console.log('=== MATCH CREATION DEBUG ===')
+    console.log('Creating match:', {
+      player1Id: actualPlayer1.id,
+      player2Id: actualPlayer2.id,
+      player1Email: actualPlayer1.userEmail,
+      player2Email: actualPlayer2.userEmail,
+      isRatingMatch: isRatingMatch
+    })
+    console.log('Debug - actualPlayer1.userEmail type:', typeof actualPlayer1.userEmail, 'value:', actualPlayer1.userEmail)
+    console.log('Debug - actualPlayer2.userEmail type:', typeof actualPlayer2.userEmail, 'value:', actualPlayer2.userEmail)
+    console.log('=== END MATCH CREATION DEBUG ===')
     
     const match: Match = {
       id: matchId,
@@ -458,6 +514,7 @@ class MatchmakingServer {
       currentGame: 1,
       player1Score: 0,
       player2Score: 0,
+      isRatingMatch: !!actualPlayer1.userEmail && !!actualPlayer2.userEmail,
       stageStriking: {
         currentPlayer: 0,
         strikesRemaining: 1, // Player 1 bans 1 stage first
@@ -727,6 +784,85 @@ class MatchmakingServer {
     })
   }
 
+  private async processRatingMatchResult(matchData: Match, winner: number) {
+    try {
+      console.log(`Processing rating match result for match ${matchData.id}`)
+      console.log(`Winner: Player ${winner}`)
+      
+      // Get player emails for rating battles
+      const player1Email = matchData.players[0].userEmail
+      const player2Email = matchData.players[1].userEmail
+      
+      console.log(`Player 1 email: ${player1Email}`)
+      console.log(`Player 2 email: ${player2Email}`)
+      
+      if (!player1Email || !player2Email) {
+        console.error('Missing user emails for rating match:', { player1Email, player2Email })
+        return
+      }
+      
+              // Call the rating battle API to process the match result
+        const apiUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/matchmaking/process-rating-result`
+        const requestBody = {
+          player1Id: player1Email,
+          player2Id: player2Email,
+          matchId: matchData.id,
+          winner
+        }
+        
+        console.log(`Calling rating API: ${apiUrl}`)
+        console.log(`Request body:`, requestBody)
+        
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody)
+        })
+      
+              console.log(`API response status: ${response.status}`)
+        if (response.ok) {
+          const result = await response.json() as {
+            player1NewRating: number
+            player2NewRating: number
+            player1RatingChange: number
+            player2RatingChange: number
+          }
+          console.log('Rating match result processed successfully:', result)
+        
+        // Send rating updates to both players
+        matchData.players.forEach((player, index) => {
+          this.sendMessage(player.ws, {
+            type: 'rating_update',
+            playerId: player.userEmail || player.id,
+            newRating: index === 0 ? result.player1NewRating : result.player2NewRating,
+            ratingChange: index === 0 ? result.player1RatingChange : result.player2RatingChange
+          })
+        })
+        
+        // Send match result processed notification
+        matchData.players.forEach(player => {
+          this.sendMessage(player.ws, {
+            type: 'match_result_processed',
+            matchId: matchData.id,
+            player1Id: player1Email,
+            player2Id: player2Email,
+            winner,
+            player1NewRating: result.player1NewRating,
+            player2NewRating: result.player2NewRating,
+            player1RatingChange: result.player1RatingChange,
+            player2RatingChange: result.player2RatingChange
+          })
+        })
+      } else {
+        console.error('Failed to process rating match result:', response.status, response.statusText)
+      }
+    } catch (error) {
+      console.error('Error processing rating match result:', error)
+    }
+  }
+
   private handleGameResult(playerId: string, matchId: string, winner: number) {
     console.log(`Player ${playerId} reported game result: Player ${winner} won`)
     
@@ -774,13 +910,33 @@ class MatchmakingServer {
         }
 
         // Check if match is complete (best of 3)
+        console.log('Checking if match is complete. Player1Score:', matchData.player1Score, 'Player2Score:', matchData.player2Score)
         if (matchData.player1Score >= 2 || matchData.player2Score >= 2) {
+          console.log('Match is complete! Setting status to completed')
           matchData.status = 'completed'
           const winner = matchData.player1Score >= 2 ? 0 : 1
           
-          console.log(`Match complete! Player ${winner} wins the set`)
+          console.log('About to enter match completion logic...')
+          
+          // LOGGING: Show matchData and isRatingMatch
+          console.log('=== MATCH COMPLETION DEBUG ===')
+          console.log('Match complete! isRatingMatch:', matchData.isRatingMatch, 'player1:', matchData.players[0].userEmail, 'player2:', matchData.players[1].userEmail)
+          console.log('Full matchData:', JSON.stringify(matchData, null, 2))
+          console.log('=== END MATCH COMPLETION DEBUG ===')
+          
+          // Process rating calculations if this is a rating match
+          if (matchData.isRatingMatch) {
+            console.log('Processing rating match result...')
+            this.processRatingMatchResult(matchData, winner)
+          } else {
+            console.log('Not a rating match, skipping rating processing')
+            console.log('Debug - matchData.isRatingMatch value:', matchData.isRatingMatch)
+            console.log('Debug - player1.userEmail:', matchData.players[0].userEmail)
+            console.log('Debug - player2.userEmail:', matchData.players[1].userEmail)
+          }
           
           // Notify both players
+          console.log('Sending match_complete messages to players...')
           matchData.players.forEach(player => {
             this.sendMessage(player.ws, {
               type: 'match_complete',
@@ -792,6 +948,7 @@ class MatchmakingServer {
               }
             })
           })
+          console.log('Match completion logic finished')
         } else {
           // Start next game
           matchData.currentGame++

@@ -100,8 +100,27 @@ async function processMessage(message: Message) {
           discord_channel_id: message.channelId,
         }),
       });
-      const result = await response.json();
+      
+      // Check if response is ok
+      if (!response.ok) {
+        console.error(`Ranking API error: ${response.status} ${response.statusText}`);
+        return;
+      }
+      
+      // Check if response has content
+      const responseText = await response.text();
+      if (!responseText) {
+        console.error('Ranking API returned empty response');
+        return;
+      }
+      
+      // Try to parse JSON
+      try {
+        const result = JSON.parse(responseText);
       console.log('Ranking API response:', result);
+      } catch (parseError) {
+        console.error('Failed to parse ranking API response as JSON:', responseText);
+      }
     } catch (err) {
       console.error('Error sending ranking to API:', err);
     }
@@ -163,8 +182,26 @@ async function processMessage(message: Message) {
         }),
       });
 
-      const data = await apiResponse.json();
+      // Check if response is ok
+      if (!apiResponse.ok) {
+        console.error(`Tournament API error: ${apiResponse.status} ${apiResponse.statusText}`);
+        return;
+      }
+      
+      // Check if response has content
+      const responseText = await apiResponse.text();
+      if (!responseText) {
+        console.error('Tournament API returned empty response');
+        return;
+      }
+      
+      // Try to parse JSON
+      try {
+        const data = JSON.parse(responseText);
       console.log('Tournament saved:', data);
+      } catch (parseError) {
+        console.error('Failed to parse tournament API response as JSON:', responseText);
+      }
     } catch (error) {
       console.error('Error processing tournament:', error);
     }
@@ -183,10 +220,29 @@ async function handleMessageDelete(messageId: string, channelId: string) {
         method: 'DELETE',
       });
       
-      if (response.ok) {
+      // Check if response is ok
+      if (!response.ok) {
+        console.error(`Tournament deletion API error: ${response.status} ${response.statusText}`);
+        return;
+      }
+      
+      // Check if response has content
+      const responseText = await response.text();
+      if (!responseText) {
+        console.error('Tournament deletion API returned empty response');
+        return;
+      }
+      
+      // Try to parse JSON
+      try {
+        const result = JSON.parse(responseText);
+        if (result.success) {
         console.log(`Tournament deleted from database: ${messageId}`);
       } else {
-        console.error(`Failed to delete tournament: ${messageId}`);
+          console.error(`Failed to delete tournament: ${messageId}`, result.error);
+        }
+      } catch (parseError) {
+        console.error('Failed to parse tournament deletion API response as JSON:', responseText);
       }
     } catch (error) {
       console.error('Error deleting tournament:', error);
@@ -228,10 +284,29 @@ async function syncTournaments() {
         method: 'DELETE',
       });
       
-      if (response.ok) {
+      // Check if response is ok
+      if (!response.ok) {
+        console.error(`Tournament sync API error: ${response.status} ${response.statusText}`);
+        return;
+      }
+      
+      // Check if response has content
+      const responseText = await response.text();
+      if (!responseText) {
+        console.error('Tournament sync API returned empty response');
+        return;
+      }
+      
+      // Try to parse JSON
+      try {
+        const result = JSON.parse(responseText);
+        if (result.success) {
         console.log('Tournament sync completed');
       } else {
-        console.error('Failed to sync tournaments');
+          console.error('Tournament sync failed:', result.error);
+        }
+      } catch (parseError) {
+        console.error('Failed to parse tournament sync API response as JSON:', responseText);
       }
     } catch (error) {
       console.error('Error syncing tournaments:', error);
@@ -265,7 +340,7 @@ client.once('ready', async () => {
   }
 
   // Initial sync to clean up any orphaned tournaments
-  // await syncTournaments(); // Temporarily disabled for debugging
+  await syncTournaments(); // Clean up old tournaments on startup
 });
 
 // Listen for new messages

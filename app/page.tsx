@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server'
+import { supabaseServer } from '@/utils/supabase/server'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
 import TournamentImage from './components/TournamentImage'
@@ -41,7 +41,7 @@ async function getTournamentDetails(url: string): Promise<TournamentDetails> {
     });
 
     if (!response.ok) {
-      console.log('Failed to fetch tournament page:', response.status);
+  
       return {};
     }
 
@@ -80,7 +80,7 @@ async function getTournamentDetails(url: string): Promise<TournamentDetails> {
           day: 'numeric'
         });
       } catch (e) {
-        console.log('Failed to parse startAt timestamp:', startAtMatch[1]);
+        // Failed to parse timestamp
       }
     } else if (endAtMatch && endAtMatch[1]) {
       try {
@@ -91,7 +91,7 @@ async function getTournamentDetails(url: string): Promise<TournamentDetails> {
           day: 'numeric'
         });
       } catch (e) {
-        console.log('Failed to parse endAt timestamp:', endAtMatch[1]);
+        // Failed to parse timestamp
       }
     } else if (startDateMatch && startDateMatch[1]) {
       try {
@@ -173,26 +173,28 @@ export const dynamic = 'force-dynamic';
 
 export default async function Home() {
   // const cookieStore = cookies()
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  const supabase = supabaseServer
 
+  console.log('Home page: Fetching tournaments from database...');
   const { data: tournaments, error } = await supabase
     .from('tournaments')
     .select('*')
     .order('created_at', { ascending: false })
     .limit(3)
 
-  console.log('DEBUG: Tournaments from database:', tournaments?.length, tournaments?.map(t => t.title));
+  console.log('Home page: Tournaments fetched:', tournaments);
+  console.log('Home page: Error if any:', error);
 
   if (error) {
     console.error('Error fetching tournaments:', error)
   }
 
+  console.log('Home page: Number of tournaments found:', tournaments?.length || 0);
+
   // Fetch additional details for each tournament
   const tournamentsWithDetails = await Promise.all(
     tournaments?.map(async (tournament: Tournament) => {
+      console.log('Home page: Processing tournament:', tournament.title);
       const tournamentLink = findFirstUrl(tournament.description || '');
       const details = tournamentLink ? await getTournamentDetails(tournamentLink) : {};
       
@@ -204,7 +206,7 @@ export default async function Home() {
     }) || []
   )
 
-  console.log('DEBUG: Tournaments with details:', tournamentsWithDetails.length, tournamentsWithDetails.map(t => t.title));
+  console.log('Home page: Tournaments with details:', tournamentsWithDetails);
 
   return (
     <main className="min-h-screen bg-background">
@@ -314,7 +316,6 @@ export default async function Home() {
               ) : (
                 <div className="text-center py-8">
                   <p className="text-hawaii-muted mb-4">No tournaments found in database</p>
-                  <p className="text-sm text-hawaii-muted">Debug info: tournaments.length = {tournaments?.length || 0}</p>
                 </div>
               )}
                 <div className="text-center pt-3">

@@ -228,10 +228,8 @@ export default function TournamentMatch({ matchId, opponent, onLeaveMatch, playe
     console.log('- bothPicked:', bothPicked)
     console.log('- matchStatusState:', matchStatusState)
     
-    if (bothPicked && matchStatusState === 'character_selection') {
-      console.log('Both characters selected but still in character_selection state, forcing transition to stage_striking')
-      setMatchStatusState('stage_striking')
-    }
+    // The backend should handle the transition automatically when both characters are selected
+    // No need to force local state transition
   }, [player1Character, player2Character, matchStatusState])
 
   const handleCharacterSelect = (character: string) => {

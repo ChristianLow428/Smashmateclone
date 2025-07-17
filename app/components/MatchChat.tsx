@@ -16,6 +16,7 @@ interface MatchChatProps {
   matchId: string
   opponent: {
     id: string
+    displayName?: string
     preferences: {
       island: string
       connection: 'wired' | 'wireless'
@@ -70,7 +71,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
           id: msg.id,
           sender: session?.user && msg.sender_id === session.user.email
             ? session.user.name || 'You'
-            : 'Opponent',
+            : opponent.displayName || 'Opponent',
           content: msg.content,
           timestamp: new Date(msg.created_at),
           type: 'user' as const
@@ -114,7 +115,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
             id: msg.id,
             sender: session?.user && msg.sender_id === session.user.email
               ? session.user.name || 'You'
-              : 'Opponent',
+              : opponent.displayName || 'Opponent',
             content: msg.content,
             timestamp: new Date(msg.created_at),
             type: 'user' as const
@@ -191,7 +192,7 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
                 id: newMessage.id,
                 sender: session?.user && newMessage.sender_id === session.user.email
                   ? session.user.name || 'You'
-                  : 'Opponent',
+                  : opponent.displayName || 'Opponent',
                 content: newMessage.content,
                 timestamp: new Date(newMessage.created_at),
                 type: 'user'
