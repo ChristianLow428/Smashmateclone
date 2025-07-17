@@ -1,11 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { ratingBattleService, RatingBattlePreferences } from '../services/rating-battle'
 
-// Determine if we should use WebSocket or Supabase
-// Use WebSocket only for local development, Supabase for production
-const useWebSocket = process.env.NODE_ENV === 'development' && 
-                    typeof window !== 'undefined' && 
-                    window.location.hostname === 'localhost'
+// Use WebSocket for both development and production to avoid Supabase permission issues
+// The WebSocket server handles all rating battle logic
+const useWebSocket = true // Always use WebSocket
 
 export function useRatingBattle() {
   const [isSearching, setIsSearching] = useState(false)
@@ -15,8 +13,8 @@ export function useRatingBattle() {
 
   useEffect(() => {
     if (useWebSocket) {
-      // Use WebSocket service for local development
-      console.log('Using WebSocket rating battle service (local development)')
+      // Use WebSocket service for all environments
+      console.log('Using WebSocket rating battle service')
       
       // Set up rating battle service callbacks
       ratingBattleService.onMatch((matchId) => {
@@ -40,22 +38,22 @@ export function useRatingBattle() {
         ratingBattleService.disconnect()
       }
     } else {
-      // For production, we'll use the same WebSocket service but with rating functionality
-      console.log('Using WebSocket rating battle service (production)')
+      // Fallback to Supabase service (not used anymore)
+      console.log('Using Supabase rating battle service (fallback)')
       
       ratingBattleService.onMatch((matchId) => {
-        console.log('WebSocket: Rating match found:', matchId)
+        console.log('Supabase: Rating match found:', matchId)
         setCurrentMatch(matchId)
         setIsSearching(false)
       })
 
       ratingBattleService.onMatchStatus((status) => {
-        console.log('WebSocket: Rating match status update:', status)
+        console.log('Supabase: Rating match status update:', status)
         setMatchStatus(status)
       })
 
       ratingBattleService.onError((error) => {
-        console.error('WebSocket: Rating battle error:', error)
+        console.error('Supabase: Rating battle error:', error)
         setError(error)
         setIsSearching(false)
       })
