@@ -1007,6 +1007,16 @@ class MatchmakingServer {
       
       console.log('Rating match result processed successfully')
       
+      // Send rating updates to both players
+      matchData.players.forEach((player, index) => {
+        this.sendMessage(player.ws, {
+          type: 'rating_update',
+          playerId: player.userEmail || player.id,
+          newRating: index === 0 ? player1NewRating : player2NewRating,
+          ratingChange: index === 0 ? player1RatingChange : player2RatingChange
+        })
+      })
+      
       // Send match result processed notification
       matchData.players.forEach(player => {
         this.sendMessage(player.ws, {
@@ -1022,8 +1032,8 @@ class MatchmakingServer {
         })
       })
 
-      // After updating ratings and history, broadcast rankings update
-      this.broadcastRankingsUpdate()
+      // Broadcast rankings update to all connected clients
+      await this.broadcastRankingsUpdate()
     } catch (error) {
       console.error('Error processing rating match result:', error)
     }
@@ -1201,7 +1211,7 @@ class MatchmakingServer {
     }
   }
 
-  private broadcastRankingsUpdate() {
+  private async broadcastRankingsUpdate() {
     console.log(`Broadcasting rankings update to ${this.rankingsConnections.size} clients`)
     
     // Get current rankings from Supabase
@@ -1210,42 +1220,41 @@ class MatchmakingServer {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    supabase
+    const { data: rankings, error } = await supabase
       .from('player_ratings')
       .select('*')
       .order('rating', { ascending: false })
-      .then(async ({ data: rankings, error }) => {
-        if (error) {
-          console.error('Error fetching rankings:', error)
-          return
+
+    if (error) {
+      console.error('Error fetching rankings:', error)
+      return
+    }
+
+    // Get display names for all players
+    const rankingsWithNames = await Promise.all(
+      rankings.map(async (player) => {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('email', player.player_id)
+          .single()
+
+        return {
+          ...player,
+          display_name: profile?.name || player.player_id
         }
-
-        // Get display names for all players
-        const rankingsWithNames = await Promise.all(
-          rankings.map(async (player) => {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('name')
-              .eq('email', player.player_id)
-              .single()
-
-            return {
-              ...player,
-              display_name: profile?.name || player.player_id
-            }
-          })
-        )
-
-        // Broadcast to all rankings connections
-        this.rankingsConnections.forEach(ws => {
-          if (ws.readyState === WebSocket.OPEN) {
-            this.sendMessage(ws, {
-              type: 'rankings_update',
-              rankings: rankingsWithNames
-            })
-          }
-        })
       })
+    )
+
+    // Broadcast to all rankings connections
+    this.rankingsConnections.forEach(ws => {
+      if (ws.readyState === WebSocket.OPEN) {
+        this.sendMessage(ws, {
+          type: 'rankings_update',
+          rankings: rankingsWithNames
+        })
+      }
+    })
   }
 }
 
