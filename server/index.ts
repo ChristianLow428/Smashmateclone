@@ -836,24 +836,40 @@ class MatchmakingServer {
       // Import the rating calculation functions
       const { calculateELOChange, calculateExpectedWinRate, calculateAdjustedKFactor } = await import('./rating-calculations')
       
-      // Get current ratings from the database
+      // Get current ratings from the database using service role key
       const supabase = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        }
       )
       
+      console.log('Fetching current ratings from database...')
+      
       // Get current ratings
-      const { data: player1Data } = await supabase
+      const { data: player1Data, error: player1Error } = await supabase
         .from('player_ratings')
         .select('*')
         .eq('player_id', player1Email)
         .single()
       
-      const { data: player2Data } = await supabase
+      if (player1Error) {
+        console.error('Error fetching player 1 rating:', player1Error)
+      }
+      
+      const { data: player2Data, error: player2Error } = await supabase
         .from('player_ratings')
         .select('*')
         .eq('player_id', player2Email)
         .single()
+      
+      if (player2Error) {
+        console.error('Error fetching player 2 rating:', player2Error)
+      }
       
       const player1CurrentRating = player1Data?.rating || 1000
       const player2CurrentRating = player2Data?.rating || 1000
@@ -879,7 +895,7 @@ class MatchmakingServer {
       
       // Update player 1 rating
       if (player1Data) {
-        await supabase
+        const { error: updateError1 } = await supabase
           .from('player_ratings')
           .update({
             rating: player1NewRating,
@@ -888,8 +904,12 @@ class MatchmakingServer {
             losses: player1Data.losses + (player1Result === 'loss' ? 1 : 0)
           })
           .eq('player_id', player1Email)
+        
+        if (updateError1) {
+          console.error('Error updating player 1 rating:', updateError1)
+        }
       } else {
-        await supabase
+        const { error: insertError1 } = await supabase
           .from('player_ratings')
           .insert({
             player_id: player1Email,
@@ -898,11 +918,15 @@ class MatchmakingServer {
             wins: player1Result === 'win' ? 1 : 0,
             losses: player1Result === 'loss' ? 1 : 0
           })
+        
+        if (insertError1) {
+          console.error('Error inserting player 1 rating:', insertError1)
+        }
       }
       
       // Update player 2 rating
       if (player2Data) {
-        await supabase
+        const { error: updateError2 } = await supabase
           .from('player_ratings')
           .update({
             rating: player2NewRating,
@@ -911,8 +935,12 @@ class MatchmakingServer {
             losses: player2Data.losses + (player2Result === 'loss' ? 1 : 0)
           })
           .eq('player_id', player2Email)
+        
+        if (updateError2) {
+          console.error('Error updating player 2 rating:', updateError2)
+        }
       } else {
-        await supabase
+        const { error: insertError2 } = await supabase
           .from('player_ratings')
           .insert({
             player_id: player2Email,
@@ -921,37 +949,42 @@ class MatchmakingServer {
             wins: player2Result === 'win' ? 1 : 0,
             losses: player2Result === 'loss' ? 1 : 0
           })
+        
+        if (insertError2) {
+          console.error('Error inserting player 2 rating:', insertError2)
+        }
       }
       
-      // Add rating history (optional)
-      try {
-        await supabase.from('rating_history').insert([
-          {
-            player_id: player1Email,
-            match_id: matchData.id,
-            old_rating: player1CurrentRating,
-            new_rating: player1NewRating,
-            rating_change: player1RatingChange,
-            opponent_id: player2Email,
-            opponent_old_rating: player2CurrentRating,
-            opponent_new_rating: player2NewRating,
-            result: player1Result
-          },
-          {
-            player_id: player2Email,
-            match_id: matchData.id,
-            old_rating: player2CurrentRating,
-            new_rating: player2NewRating,
-            rating_change: player2RatingChange,
-            opponent_id: player1Email,
-            opponent_old_rating: player1CurrentRating,
-            opponent_new_rating: player1NewRating,
-            result: player2Result
-          }
-        ])
-      } catch (historyError) {
+      // Add rating history
+      const { error: historyError } = await supabase.from('rating_history').insert([
+        {
+          player_id: player1Email,
+          match_id: matchData.id,
+          old_rating: player1CurrentRating,
+          new_rating: player1NewRating,
+          rating_change: player1RatingChange,
+          opponent_id: player2Email,
+          opponent_old_rating: player2CurrentRating,
+          opponent_new_rating: player2NewRating,
+          result: player1Result
+        },
+        {
+          player_id: player2Email,
+          match_id: matchData.id,
+          old_rating: player2CurrentRating,
+          new_rating: player2NewRating,
+          rating_change: player2RatingChange,
+          opponent_id: player1Email,
+          opponent_old_rating: player1CurrentRating,
+          opponent_new_rating: player1NewRating,
+          result: player2Result
+        }
+      ])
+      
+      if (historyError) {
         console.error('Error adding rating history:', historyError)
-        // Don't fail the whole process for history
+      } else {
+        console.log('Rating history added successfully')
       }
       
       console.log('Rating match result processed successfully')
