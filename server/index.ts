@@ -84,6 +84,7 @@ class MatchmakingServer {
   private matches: Map<string, Match> = new Map()
   private searchQueue: Player[] = []
   private chatConnections: Map<string, ServerWebSocket[]> = new Map()
+  private rankingsConnections: Set<ServerWebSocket> = new Set()
 
   constructor(port: number) {
     const server = createServer((req, res) => {
@@ -114,11 +115,28 @@ class MatchmakingServer {
     const url = new URL(request.url, `http://${request.headers.host}`)
     const matchId = url.pathname.split('/')[2] // /match/{matchId}
 
-    if (matchId && matchId !== 'undefined') {
+    if (url.pathname === '/rankings') {
+      this.handleRankingsConnection(ws)
+    } else if (matchId && matchId !== 'undefined') {
       this.handleMatchConnection(playerId, ws, matchId)
     } else {
       this.handleMatchmakingConnection(playerId, ws)
     }
+  }
+
+  private handleRankingsConnection(ws: ServerWebSocket) {
+    console.log('New rankings connection')
+    this.rankingsConnections.add(ws)
+
+    ws.on('close', () => {
+      console.log('Rankings connection closed')
+      this.rankingsConnections.delete(ws)
+    })
+
+    ws.on('error', (error) => {
+      console.error('Rankings WebSocket error:', error)
+      this.rankingsConnections.delete(ws)
+    })
   }
 
   private handleMatchmakingConnection(playerId: string, ws: ServerWebSocket) {
@@ -989,16 +1007,6 @@ class MatchmakingServer {
       
       console.log('Rating match result processed successfully')
       
-      // Send rating updates to both players
-      matchData.players.forEach((player, index) => {
-        this.sendMessage(player.ws, {
-          type: 'rating_update',
-          playerId: player.userEmail || player.id,
-          newRating: index === 0 ? player1NewRating : player2NewRating,
-          ratingChange: index === 0 ? player1RatingChange : player2RatingChange
-        })
-      })
-      
       // Send match result processed notification
       matchData.players.forEach(player => {
         this.sendMessage(player.ws, {
@@ -1013,6 +1021,9 @@ class MatchmakingServer {
           player2RatingChange
         })
       })
+
+      // After updating ratings and history, broadcast rankings update
+      this.broadcastRankingsUpdate()
     } catch (error) {
       console.error('Error processing rating match result:', error)
     }
@@ -1188,6 +1199,53 @@ class MatchmakingServer {
         })
       })
     }
+  }
+
+  private broadcastRankingsUpdate() {
+    console.log(`Broadcasting rankings update to ${this.rankingsConnections.size} clients`)
+    
+    // Get current rankings from Supabase
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    supabase
+      .from('player_ratings')
+      .select('*')
+      .order('rating', { ascending: false })
+      .then(async ({ data: rankings, error }) => {
+        if (error) {
+          console.error('Error fetching rankings:', error)
+          return
+        }
+
+        // Get display names for all players
+        const rankingsWithNames = await Promise.all(
+          rankings.map(async (player) => {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('name')
+              .eq('email', player.player_id)
+              .single()
+
+            return {
+              ...player,
+              display_name: profile?.name || player.player_id
+            }
+          })
+        )
+
+        // Broadcast to all rankings connections
+        this.rankingsConnections.forEach(ws => {
+          if (ws.readyState === WebSocket.OPEN) {
+            this.sendMessage(ws, {
+              type: 'rankings_update',
+              rankings: rankingsWithNames
+            })
+          }
+        })
+      })
   }
 }
 

@@ -19,6 +19,52 @@ export default function RankingsPage() {
   const [onlineRankings, setOnlineRankings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [ws, setWs] = useState<WebSocket | null>(null)
+
+  useEffect(() => {
+    // Connect to WebSocket server for live rankings updates
+    const wsUrl = process.env.NODE_ENV === 'development'
+      ? 'ws://localhost:3001/rankings'
+      : (process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'wss://hawaiissbu-websocket-server.onrender.com') + '/rankings'
+
+    console.log('Connecting to rankings WebSocket:', wsUrl)
+    const websocket = new WebSocket(wsUrl)
+
+    websocket.onopen = () => {
+      console.log('Rankings WebSocket connected')
+    }
+
+    websocket.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data)
+        console.log('Rankings WebSocket message:', message)
+
+        if (message.type === 'rankings_update') {
+          console.log('Received rankings update:', message.rankings)
+          setOnlineRankings(message.rankings)
+        }
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error)
+      }
+    }
+
+    websocket.onerror = (error) => {
+      console.error('Rankings WebSocket error:', error)
+      setError('Failed to connect to rankings server')
+    }
+
+    websocket.onclose = () => {
+      console.log('Rankings WebSocket closed')
+    }
+
+    setWs(websocket)
+
+    // Cleanup on unmount
+    return () => {
+      console.log('Closing rankings WebSocket')
+      websocket.close()
+    }
+  }, [])
 
   const fetchRankings = async () => {
     try {
