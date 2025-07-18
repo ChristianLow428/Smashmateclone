@@ -48,6 +48,7 @@ export default function RatingBattle() {
   const [playerRating, setPlayerRating] = useState<PlayerRating | null>(null)
   const [matchResults, setMatchResults] = useState<MatchResult[]>([])
   const [lastRatingChange, setLastRatingChange] = useState<number | null>(null)
+  const [isRatingUpdating, setIsRatingUpdating] = useState(false)
 
   // Default preferences
   const [preferences, setPreferences] = useState<MatchPreferences>({
@@ -213,8 +214,26 @@ export default function RatingBattle() {
       } else if (matchStatus.type === 'match_state' && matchStatus.status === 'active') {
         console.log('Game is now active')
       } else if (matchStatus.type === 'match_complete') {
-        console.log('Match completed')
+        console.log('Match completed:', matchStatus)
         setMatchEnded(true)
+        
+        // Show match completion notification
+        const notification = document.createElement('div')
+        notification.className = 'fixed top-4 left-4 p-4 rounded-lg text-white font-bold z-50 bg-blue-500'
+        notification.innerHTML = `
+          <div class="text-lg">Match Complete!</div>
+          <div class="text-sm">Final Score: ${matchStatus.finalScore.player1} - ${matchStatus.finalScore.player2}</div>
+          <div class="text-sm">Winner: Player ${matchStatus.winner + 1}</div>
+        `
+        document.body.appendChild(notification)
+        
+        // Remove notification after 5 seconds
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification)
+          }
+        }, 5000)
+        
         // Reload ratings and match history after match completion
         loadPlayerRating()
         loadMatchHistory()
@@ -224,7 +243,11 @@ export default function RatingBattle() {
       } else if (matchStatus.type === 'rating_update') {
         // Handle rating updates
         console.log('Rating update received:', matchStatus)
+        console.log('Current session email:', session?.user?.email)
+        console.log('Player ID in message:', matchStatus.playerId)
+        
         if (matchStatus.playerId === session?.user?.email) {
+          setIsRatingUpdating(true)
           const oldRating = playerRating?.rating || 1000
           const newRating = matchStatus.newRating
           const ratingChange = matchStatus.ratingChange
@@ -250,15 +273,27 @@ export default function RatingBattle() {
           notification.className = `fixed top-4 right-4 p-4 rounded-lg text-white font-bold z-50 ${
             ratingChange >= 0 ? 'bg-green-500' : 'bg-red-500'
           }`
-          notification.textContent = `Rating: ${ratingChange >= 0 ? '+' : ''}${ratingChange}`
+          notification.innerHTML = `
+            <div class="text-lg">${ratingChange >= 0 ? 'Rating Increased!' : 'Rating Decreased'}</div>
+            <div class="text-sm">${oldRating} → ${newRating}</div>
+            <div class="text-sm">${ratingChange >= 0 ? '+' : ''}${ratingChange}</div>
+          `
           document.body.appendChild(notification)
           
-          // Remove notification after 3 seconds
+          // Remove notification after 5 seconds
           setTimeout(() => {
             if (notification.parentNode) {
               notification.parentNode.removeChild(notification)
             }
-          }, 3000)
+          }, 5000)
+          
+          // Force reload player rating from database
+          setTimeout(() => {
+            loadPlayerRating()
+            setIsRatingUpdating(false)
+          }, 1000)
+        } else {
+          console.log('Rating update not for current player')
         }
         // Reload match history when ratings are updated
         loadMatchHistory()
@@ -275,6 +310,24 @@ export default function RatingBattle() {
         
         console.log(`Match Summary: You ${playerRatingChange >= 0 ? 'won' : 'lost'}! Rating: ${playerRatingChange >= 0 ? '+' : ''}${playerRatingChange}`)
         
+        setIsRatingUpdating(true)
+        
+        // Update local rating state immediately
+        setPlayerRating(prev => prev ? { 
+          ...prev, 
+          rating: playerNewRating,
+          games_played: prev.games_played + 1,
+          wins: playerRatingChange > 0 ? prev.wins + 1 : prev.wins,
+          losses: playerRatingChange < 0 ? prev.losses + 1 : prev.losses
+        } : null)
+        
+        setLastRatingChange(playerRatingChange)
+        
+        // Clear rating change after 10 seconds
+        setTimeout(() => {
+          setLastRatingChange(null)
+        }, 10000)
+        
         // Show match result notification
         const notification = document.createElement('div')
         notification.className = `fixed top-4 left-4 p-4 rounded-lg text-white font-bold z-50 ${
@@ -284,6 +337,7 @@ export default function RatingBattle() {
           <div class="text-lg">${playerRatingChange >= 0 ? 'Victory!' : 'Defeat'}</div>
           <div class="text-sm">Your rating: ${playerRatingChange >= 0 ? '+' : ''}${playerRatingChange}</div>
           <div class="text-sm">New rating: ${playerNewRating}</div>
+          <div class="text-sm">Opponent: ${opponentRatingChange >= 0 ? '+' : ''}${opponentRatingChange}</div>
         `
         document.body.appendChild(notification)
         
@@ -295,8 +349,11 @@ export default function RatingBattle() {
         }, 5000)
         
         // Reload all data to show updated ratings and match history
-        loadPlayerRating()
-        loadMatchHistory()
+        setTimeout(() => {
+          loadPlayerRating()
+          loadMatchHistory()
+          setIsRatingUpdating(false)
+        }, 1000)
       }
     }
   }, [matchStatus, useWebSocket, opponent, playerIndex, currentMatch, session])
@@ -427,10 +484,28 @@ export default function RatingBattle() {
         {/* Player Rating Display */}
         {session?.user?.email && playerRating && (
           <div className="bg-card-bg rounded-lg shadow-lg border border-hawaii-border p-6 mb-8">
-            <h2 className="text-2xl font-bold mb-4 text-hawaii-accent font-monopol">Your Rating</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold text-hawaii-accent font-monopol">Your Rating</h2>
+              <button
+                onClick={refreshAllData}
+                disabled={isRatingUpdating}
+                className={`px-3 py-1 rounded text-sm font-semibold transition-colors ${
+                  isRatingUpdating
+                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                    : 'bg-hawaii-secondary text-white hover:bg-hawaii-accent'
+                }`}
+              >
+                {isRatingUpdating ? 'Updating...' : 'Refresh'}
+              </button>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center">
-                <div className="text-3xl font-bold text-hawaii-primary">{playerRating.rating}</div>
+                <div className="text-3xl font-bold text-hawaii-primary flex items-center justify-center">
+                  {playerRating.rating}
+                  {isRatingUpdating && (
+                    <div className="ml-2 animate-spin rounded-full h-4 w-4 border-b-2 border-hawaii-primary"></div>
+                  )}
+                </div>
                 <div className="text-sm text-hawaii-muted">Rating</div>
                 <div className="text-xs text-hawaii-muted mt-1">{getRatingTier(playerRating.rating)}</div>
                 {lastRatingChange !== null && (

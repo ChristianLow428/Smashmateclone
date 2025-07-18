@@ -117,6 +117,7 @@ class RatingBattleService {
           this.onMatchStatusCallback?.(message)
         } else if (message.type === 'rating_update') {
           console.log('Rating update message received:', message)
+          console.log('Calling onMatchStatusCallback with rating update')
           this.onMatchStatusCallback?.(message)
         } else if (message.type === 'chat') {
           console.log('Chat message received:', message)
@@ -126,6 +127,7 @@ class RatingBattleService {
           this.onChatMessageCallback?.(message)
         } else if (message.type === 'match_result_processed') {
           console.log('Match result processed message received:', message)
+          console.log('Calling onMatchStatusCallback with match result processed')
           this.onMatchStatusCallback?.(message)
         } else if (message.type === 'error') {
           console.log('Error message received:', message)
