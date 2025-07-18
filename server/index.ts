@@ -113,20 +113,28 @@ class MatchmakingServer {
 
     // Check if this is a match-specific connection
     const url = new URL(request.url, `http://${request.headers.host}`)
-    const matchId = url.pathname.split('/')[2] // /match/{matchId}
+    const path = url.pathname
+    console.log('WebSocket connection path:', path)
 
-    if (url.pathname === '/rankings') {
+    if (path === '/rankings') {
+      console.log('Rankings connection detected')
       this.handleRankingsConnection(ws)
-    } else if (matchId && matchId !== 'undefined') {
-      this.handleMatchConnection(playerId, ws, matchId)
     } else {
-      this.handleMatchmakingConnection(playerId, ws)
+      const matchId = path.split('/')[2] // /match/{matchId}
+      if (matchId && matchId !== 'undefined') {
+        this.handleMatchConnection(playerId, ws, matchId)
+      } else {
+        this.handleMatchmakingConnection(playerId, ws)
+      }
     }
   }
 
   private handleRankingsConnection(ws: ServerWebSocket) {
     console.log('New rankings connection')
     this.rankingsConnections.add(ws)
+
+    // Send initial rankings data
+    this.broadcastRankingsUpdate()
 
     ws.on('close', () => {
       console.log('Rankings connection closed')
@@ -837,24 +845,17 @@ class MatchmakingServer {
   private async processRatingMatchResult(matchData: Match, winner: number) {
     try {
       console.log(`Processing rating match result for match ${matchData.id}`)
-      console.log(`Winner: Player ${winner}`)
       
-      // Get player emails for rating battles
       const player1Email = matchData.players[0].userEmail
       const player2Email = matchData.players[1].userEmail
-      
-      console.log(`Player 1 email: ${player1Email}`)
-      console.log(`Player 2 email: ${player2Email}`)
       
       if (!player1Email || !player2Email) {
         console.error('Missing user emails for rating match:', { player1Email, player2Email })
         return
       }
 
-      // Import the rating calculation functions
       const { calculateELOChange, calculateExpectedWinRate, calculateAdjustedKFactor } = await import('./rating-calculations')
       
-      // Get current ratings from the database using service role key
       const supabase = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -866,35 +867,24 @@ class MatchmakingServer {
         }
       )
       
-      console.log('Fetching current ratings from database...')
-      
-      // Get current ratings
-      const { data: player1Data, error: player1Error } = await supabase
+      // Get both players' ratings in a single query
+      const { data: playerRatings, error: ratingsError } = await supabase
         .from('player_ratings')
         .select('*')
-        .eq('player_id', player1Email)
-        .single()
-      
-      if (player1Error) {
-        console.error('Error fetching player 1 rating:', player1Error)
+        .in('player_id', [player1Email, player2Email])
+
+      if (ratingsError) {
+        console.error('Error fetching player ratings:', ratingsError)
+        return
       }
-      
-      const { data: player2Data, error: player2Error } = await supabase
-        .from('player_ratings')
-        .select('*')
-        .eq('player_id', player2Email)
-        .single()
-      
-      if (player2Error) {
-        console.error('Error fetching player 2 rating:', player2Error)
-      }
+
+      const player1Data = playerRatings?.find(p => p.player_id === player1Email)
+      const player2Data = playerRatings?.find(p => p.player_id === player2Email)
       
       const player1CurrentRating = player1Data?.rating || 1000
       const player2CurrentRating = player2Data?.rating || 1000
       const player1GamesPlayed = player1Data?.games_played || 0
       const player2GamesPlayed = player2Data?.games_played || 0
-      
-      console.log(`Current ratings - Player1: ${player1CurrentRating}, Player2: ${player2CurrentRating}`)
       
       // Calculate rating changes
       const player1KFactor = calculateAdjustedKFactor(player1CurrentRating, player2CurrentRating, player1GamesPlayed)
@@ -908,73 +898,51 @@ class MatchmakingServer {
       
       const player1NewRating = Math.max(100, player1CurrentRating + player1RatingChange)
       const player2NewRating = Math.max(100, player2CurrentRating + player2RatingChange)
-      
-      console.log(`Rating changes - Player1: ${player1RatingChange} (${player1CurrentRating} -> ${player1NewRating}), Player2: ${player2RatingChange} (${player2CurrentRating} -> ${player2NewRating})`)
-      
-      // Update player 1 rating
+
+      // Prepare the updates
+      const updates = []
+      const historyEntries = []
+
+      // Player 1 update
       if (player1Data) {
-        const { error: updateError1 } = await supabase
-          .from('player_ratings')
-          .update({
-            rating: player1NewRating,
-            games_played: player1GamesPlayed + 1,
-            wins: player1Data.wins + (player1Result === 'win' ? 1 : 0),
-            losses: player1Data.losses + (player1Result === 'loss' ? 1 : 0)
-          })
-          .eq('player_id', player1Email)
-        
-        if (updateError1) {
-          console.error('Error updating player 1 rating:', updateError1)
-        }
+        updates.push({
+          player_id: player1Email,
+          rating: player1NewRating,
+          games_played: player1GamesPlayed + 1,
+          wins: player1Data.wins + (player1Result === 'win' ? 1 : 0),
+          losses: player1Data.losses + (player1Result === 'loss' ? 1 : 0)
+        })
       } else {
-        const { error: insertError1 } = await supabase
-          .from('player_ratings')
-          .insert({
-            player_id: player1Email,
-            rating: player1NewRating,
-            games_played: 1,
-            wins: player1Result === 'win' ? 1 : 0,
-            losses: player1Result === 'loss' ? 1 : 0
-          })
-        
-        if (insertError1) {
-          console.error('Error inserting player 1 rating:', insertError1)
-        }
+        updates.push({
+          player_id: player1Email,
+          rating: player1NewRating,
+          games_played: 1,
+          wins: player1Result === 'win' ? 1 : 0,
+          losses: player1Result === 'loss' ? 1 : 0
+        })
       }
-      
-      // Update player 2 rating
+
+      // Player 2 update
       if (player2Data) {
-        const { error: updateError2 } = await supabase
-          .from('player_ratings')
-          .update({
-            rating: player2NewRating,
-            games_played: player2GamesPlayed + 1,
-            wins: player2Data.wins + (player2Result === 'win' ? 1 : 0),
-            losses: player2Data.losses + (player2Result === 'loss' ? 1 : 0)
-          })
-          .eq('player_id', player2Email)
-        
-        if (updateError2) {
-          console.error('Error updating player 2 rating:', updateError2)
-        }
+        updates.push({
+          player_id: player2Email,
+          rating: player2NewRating,
+          games_played: player2GamesPlayed + 1,
+          wins: player2Data.wins + (player2Result === 'win' ? 1 : 0),
+          losses: player2Data.losses + (player2Result === 'loss' ? 1 : 0)
+        })
       } else {
-        const { error: insertError2 } = await supabase
-          .from('player_ratings')
-          .insert({
-            player_id: player2Email,
-            rating: player2NewRating,
-            games_played: 1,
-            wins: player2Result === 'win' ? 1 : 0,
-            losses: player2Result === 'loss' ? 1 : 0
-          })
-        
-        if (insertError2) {
-          console.error('Error inserting player 2 rating:', insertError2)
-        }
+        updates.push({
+          player_id: player2Email,
+          rating: player2NewRating,
+          games_played: 1,
+          wins: player2Result === 'win' ? 1 : 0,
+          losses: player2Result === 'loss' ? 1 : 0
+        })
       }
-      
-      // Add rating history
-      const { error: historyError } = await supabase.from('rating_history').insert([
+
+      // History entries
+      historyEntries.push(
         {
           player_id: player1Email,
           match_id: matchData.id,
@@ -997,26 +965,22 @@ class MatchmakingServer {
           opponent_new_rating: player1NewRating,
           result: player2Result
         }
+      )
+
+      // Perform all database operations in parallel
+      await Promise.all([
+        // Update or insert player ratings
+        ...updates.map(update => 
+          supabase
+            .from('player_ratings')
+            .upsert(update, { onConflict: 'player_id' })
+        ),
+        // Insert history entries
+        supabase
+          .from('rating_history')
+          .insert(historyEntries)
       ])
-      
-      if (historyError) {
-        console.error('Error adding rating history:', historyError)
-      } else {
-        console.log('Rating history added successfully')
-      }
-      
-      console.log('Rating match result processed successfully')
-      
-      // Send rating updates to both players
-      matchData.players.forEach((player, index) => {
-        this.sendMessage(player.ws, {
-          type: 'rating_update',
-          playerId: player.userEmail || player.id,
-          newRating: index === 0 ? player1NewRating : player2NewRating,
-          ratingChange: index === 0 ? player1RatingChange : player2RatingChange
-        })
-      })
-      
+
       // Send match result processed notification
       matchData.players.forEach(player => {
         this.sendMessage(player.ws, {
@@ -1034,6 +998,8 @@ class MatchmakingServer {
 
       // Broadcast rankings update to all connected clients
       await this.broadcastRankingsUpdate()
+
+      console.log('Rating match result processed successfully')
     } catch (error) {
       console.error('Error processing rating match result:', error)
     }
@@ -1212,49 +1178,62 @@ class MatchmakingServer {
   }
 
   private async broadcastRankingsUpdate() {
-    console.log(`Broadcasting rankings update to ${this.rankingsConnections.size} clients`)
-    
-    // Get current rankings from Supabase
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-
-    const { data: rankings, error } = await supabase
-      .from('player_ratings')
-      .select('*')
-      .order('rating', { ascending: false })
-
-    if (error) {
-      console.error('Error fetching rankings:', error)
-      return
-    }
-
-    // Get display names for all players
-    const rankingsWithNames = await Promise.all(
-      rankings.map(async (player) => {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('name')
-          .eq('email', player.player_id)
-          .single()
-
-        return {
-          ...player,
-          display_name: profile?.name || player.player_id
+    try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
         }
-      })
-    )
+      )
 
-    // Broadcast to all rankings connections
-    this.rankingsConnections.forEach(ws => {
-      if (ws.readyState === WebSocket.OPEN) {
-        this.sendMessage(ws, {
-          type: 'rankings_update',
-          rankings: rankingsWithNames
-        })
+      // Get top 10 players by rating
+      const { data: allRatings, error: ratingsError } = await supabase
+        .from('player_ratings')
+        .select('*')
+        .order('rating', { ascending: false })
+        .limit(10)
+
+      if (ratingsError) {
+        console.error('Error fetching rankings for broadcast:', ratingsError)
+        return
       }
-    })
+
+      // Get display names for all players
+      const playersWithNames = await Promise.all(
+        (allRatings || []).map(async (player) => {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('name')
+            .eq('email', player.player_id)
+            .single()
+
+          return {
+            ...player,
+            display_name: profile?.name || player.player_id
+          }
+        })
+      )
+
+      // Broadcast to all connected rankings clients
+      for (const ws of this.rankingsConnections) {
+        try {
+          this.sendMessage(ws, {
+            type: 'rankings_update',
+            rankings: playersWithNames
+          })
+        } catch (error) {
+          console.error('Error sending rankings update to client:', error)
+          // Remove dead connections
+          this.rankingsConnections.delete(ws)
+        }
+      }
+    } catch (error) {
+      console.error('Error broadcasting rankings update:', error)
+    }
   }
 }
 
