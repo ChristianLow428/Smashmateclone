@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
 
 export default function RankingsPage() {
   const [offlineRankings, setOfflineRankings] = useState<string>('')
@@ -72,7 +71,8 @@ export default function RankingsPage() {
         throw new Error('Failed to fetch offline rankings')
       }
       const offlineData = await offlineResponse.json()
-      setOfflineRankings(offlineData)
+      // Extract the content from the response
+      setOfflineRankings(offlineData.content || 'No offline rankings available')
     } catch (err) {
       console.error('Error fetching rankings:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch rankings')
@@ -120,6 +120,13 @@ export default function RankingsPage() {
                   </td>
                 </tr>
               ))}
+              {onlineRankings.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">
+                    No online rankings available
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
