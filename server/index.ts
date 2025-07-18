@@ -967,21 +967,7 @@ class MatchmakingServer {
         }
       )
 
-      // Perform all database operations in parallel
-      await Promise.all([
-        // Update or insert player ratings
-        ...updates.map(update => 
-          supabase
-            .from('player_ratings')
-            .upsert(update, { onConflict: 'player_id' })
-        ),
-        // Insert history entries
-        supabase
-          .from('rating_history')
-          .insert(historyEntries)
-      ])
-
-      // Send match result processed notification
+      // Send match result processed notification first to update UI quickly
       matchData.players.forEach(player => {
         this.sendMessage(player.ws, {
           type: 'match_result_processed',
@@ -996,8 +982,24 @@ class MatchmakingServer {
         })
       })
 
-      // Broadcast rankings update to all connected clients
-      await this.broadcastRankingsUpdate()
+      // Perform database operations in the background
+      Promise.all([
+        // Update or insert player ratings
+        ...updates.map(update => 
+          supabase
+            .from('player_ratings')
+            .upsert(update, { onConflict: 'player_id' })
+        ),
+        // Insert history entries
+        supabase
+          .from('rating_history')
+          .insert(historyEntries)
+      ]).then(() => {
+        // Broadcast rankings update after database operations complete
+        this.broadcastRankingsUpdate()
+      }).catch(error => {
+        console.error('Error updating database:', error)
+      })
 
       console.log('Rating match result processed successfully')
     } catch (error) {
