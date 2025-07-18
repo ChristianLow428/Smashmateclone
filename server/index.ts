@@ -175,7 +175,7 @@ class MatchmakingServer {
         const message = JSON.parse(data)
         console.log('Received chat message:', message)
         if (message.type === 'chat') {
-          this.handleChatMessage(matchId, message)
+          this.handleChatMessage(matchId, message, ws)
         }
       } catch (error) {
         console.error('Error parsing chat message:', error)
@@ -230,31 +230,49 @@ class MatchmakingServer {
       case 'game_result':
         this.handleGameResult(playerId, message.matchId, message.winner)
         break
+      case 'chat':
+        this.handleChatMessage(message.matchId, message, ws)
+        break
       default:
         console.log('Unknown message type:', message.type)
         this.sendError(ws, `Unknown message type: ${message.type}`)
     }
   }
 
-  private handleChatMessage(matchId: string, message: any) {
+  private handleChatMessage(matchId: string, message: any, ws: ServerWebSocket) {
     const match = this.matches.get(matchId)
     if (!match) return
 
+    // Find the player who sent the message by comparing WebSocket objects
+    const sender = match.players.find(p => p.ws === ws)?.userEmail || 'Unknown'
+
     const chatMessage: ChatMessage = {
       id: uuidv4(),
-      sender: message.sender,
+      sender: sender,
       content: message.content,
-      timestamp: message.timestamp
+      timestamp: new Date().toISOString()
     }
 
     match.chatMessages.push(chatMessage)
 
-    // Broadcast to all chat connections for this match
+    console.log(`Chat message from ${sender}: ${message.content}`)
+
+    // Broadcast to all players in the match
+    match.players.forEach(player => {
+      if (player.ws.readyState === WebSocket.OPEN) {
+        this.sendMessage(player.ws, {
+          type: 'chat',
+          ...chatMessage
+        })
+      }
+    })
+
+    // Also broadcast to any additional chat connections for this match
     const chatConnections = this.chatConnections.get(matchId)
     if (chatConnections) {
-      chatConnections.forEach(ws => {
-        if (ws.readyState === WebSocket.OPEN) {
-          this.sendMessage(ws, {
+      chatConnections.forEach(chatWs => {
+        if (chatWs.readyState === WebSocket.OPEN) {
+          this.sendMessage(chatWs, {
             type: 'chat',
             ...chatMessage
           })
