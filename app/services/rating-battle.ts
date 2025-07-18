@@ -83,7 +83,11 @@ class RatingBattleService {
     this.ws.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data)
+        console.log('=== WEBSOCKET MESSAGE DEBUG ===')
         console.log('Received rating battle WebSocket message:', message)
+        console.log('Message type:', message.type)
+        console.log('Full message:', JSON.stringify(message, null, 2))
+        console.log('=== END WEBSOCKET MESSAGE DEBUG ===')
         
         if (message.type === 'connected') {
           console.log('Connected to rating battle server')
