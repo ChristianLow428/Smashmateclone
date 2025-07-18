@@ -242,9 +242,12 @@ export default function RatingBattle() {
         setMatchEnded(true)
       } else if (matchStatus.type === 'rating_update') {
         // Handle rating updates
+        console.log('=== RATING UPDATE DEBUG ===')
         console.log('Rating update received:', matchStatus)
         console.log('Current session email:', session?.user?.email)
         console.log('Player ID in message:', matchStatus.playerId)
+        console.log('Current player rating state:', playerRating)
+        console.log('=== END RATING UPDATE DEBUG ===')
         
         if (matchStatus.playerId === session?.user?.email) {
           setIsRatingUpdating(true)
@@ -299,7 +302,11 @@ export default function RatingBattle() {
         loadMatchHistory()
       } else if (matchStatus.type === 'match_result_processed') {
         // Handle when a match result has been processed
+        console.log('=== MATCH RESULT PROCESSED DEBUG ===')
         console.log('Match result processed:', matchStatus)
+        console.log('Current session email:', session?.user?.email)
+        console.log('Current player rating state:', playerRating)
+        console.log('=== END MATCH RESULT PROCESSED DEBUG ===')
         
         // Show match result summary
         const isPlayer1 = matchStatus.player1Id === session?.user?.email
@@ -356,7 +363,7 @@ export default function RatingBattle() {
         }, 1000)
       }
     }
-  }, [matchStatus, useWebSocket, opponent, playerIndex, currentMatch, session])
+  }, [matchStatus, useWebSocket, opponent, playerIndex, currentMatch, session, playerRating])
 
   // Handle when currentMatch becomes null (match ended/left)
   useEffect(() => {

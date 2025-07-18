@@ -139,15 +139,8 @@ export default function MatchChat({ matchId, opponent, onLeaveMatch, opponentLef
         console.log('Using WebSocket sendChatMessage')
         await sendChatMessage(matchId, newMessage.trim())
         
-        // Add the message to local state immediately for better UX
-        const localMessage: Message = {
-          id: `local-${Date.now()}`,
-          sender: session.user.name || 'You',
-          content: newMessage.trim(),
-          timestamp: new Date(),
-          type: 'user'
-        }
-        setMessages(prev => [...prev, localMessage])
+        // Don't add message locally - wait for server to send it back
+        // This prevents duplicate messages
       } else {
         console.log('No chat method available')
         return
