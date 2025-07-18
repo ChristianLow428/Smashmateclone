@@ -218,6 +218,19 @@ class MatchmakingServer {
       case 'leave_rating_match':
         this.handleLeaveRatingMatch(playerId, message.matchId)
         break
+      case 'test_env':
+        // Check environment variables
+        const envStatus = {
+          type: 'env_status',
+          status: {
+            NEXT_PUBLIC_SUPABASE_URL: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+            SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+            NODE_ENV: process.env.NODE_ENV || 'unknown'
+          }
+        }
+        console.log('Environment status:', envStatus)
+        this.sendMessage(ws, envStatus)
+        break
       case 'select_character':
         this.handleCharacterSelection(playerId, message.matchId, message.character)
         break
