@@ -11,13 +11,14 @@ export async function GET() {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Get all player ratings
+    // Get top 10 players by rating
     const { data: allRatings, error: ratingsError } = await supabase
       .from('player_ratings')
       .select('*')
       .order('rating', { ascending: false })
+      .limit(10)
 
-    console.log('All ratings from DB:', allRatings)
+    console.log('Top 10 ratings from DB:', allRatings)
 
     if (ratingsError) {
       console.error('Error fetching player ratings:', ratingsError)
@@ -42,7 +43,7 @@ export async function GET() {
       })
     )
 
-    console.log('Final players with names:', playersWithNames)
+    console.log('Final top 10 players with names:', playersWithNames)
     
     // Add cache-busting headers
     const response = NextResponse.json(playersWithNames)
