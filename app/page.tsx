@@ -1,3 +1,5 @@
+'use client'
+
 import { supabaseServer } from '@/utils/supabase/server'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
@@ -155,46 +157,45 @@ async function getTournamentDetails(url: string): Promise<TournamentDetails> {
   }
 }
 
-const mockRankings = [
-  { name: 'Player1', rating: 2100 },
-  { name: 'Player2', rating: 2050 },
-  { name: 'Player3', rating: 2000 },
-  { name: 'Player4', rating: 1950 },
-  { name: 'Player5', rating: 1900 },
-  { name: 'Player6', rating: 1880 },
-  { name: 'Player7', rating: 1850 },
-  { name: 'Player8', rating: 1820 },
-  { name: 'Player9', rating: 1800 },
-  { name: 'Player10', rating: 1780 },
-]
-
 // Force dynamic rendering to prevent caching
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  // const cookieStore = cookies()
   const supabase = supabaseServer
 
-  console.log('Home page: Fetching tournaments from database...');
-  const { data: tournaments, error } = await supabase
+  // Fetch online rankings
+  const { data: onlineRankings, error: rankingsError } = await supabase
+    .from('player_ratings')
+    .select('*')
+    .order('rating', { ascending: false })
+    .limit(10)
+
+  // Get display names for all players
+  const playersWithNames = await Promise.all(
+    (onlineRankings || []).map(async (player) => {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('name')
+        .eq('email', player.player_id)
+        .single()
+
+      return {
+        ...player,
+        display_name: profile?.name || player.player_id
+      }
+    })
+  )
+
+  // Fetch tournaments
+  const { data: tournaments, error: tournamentsError } = await supabase
     .from('tournaments')
     .select('*')
     .order('created_at', { ascending: false })
     .limit(3)
 
-  console.log('Home page: Tournaments fetched:', tournaments);
-  console.log('Home page: Error if any:', error);
-
-  if (error) {
-    console.error('Error fetching tournaments:', error)
-  }
-
-  console.log('Home page: Number of tournaments found:', tournaments?.length || 0);
-
   // Fetch additional details for each tournament
   const tournamentsWithDetails = await Promise.all(
     tournaments?.map(async (tournament: Tournament) => {
-      console.log('Home page: Processing tournament:', tournament.title);
       const tournamentLink = findFirstUrl(tournament.description || '');
       const details = tournamentLink ? await getTournamentDetails(tournamentLink) : {};
       
@@ -206,12 +207,10 @@ export default async function Home() {
     }) || []
   )
 
-  console.log('Home page: Tournaments with details:', tournamentsWithDetails);
-
   return (
     <main className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Hero Section - SoCalSmash Style */}
+        {/* Hero Section */}
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold mb-4 text-hawaii-primary font-monopol">
             HawaiiSSBU
@@ -221,34 +220,43 @@ export default async function Home() {
           </p>
         </div>
 
-        {/* Main Content Grid - SoCalSmash Layout */}
+        {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Current Rankings - Left Column */}
+          {/* Online Rankings - Left Column */}
           <div className="lg:col-span-1">
             <div className="bg-card-bg rounded-lg shadow-lg border border-hawaii-border p-4">
               <h2 className="text-xl font-bold mb-4 text-hawaii-accent border-b border-hawaii-border pb-2 font-monopol">
-                Current Rankings
+                Online Rankings
               </h2>
               <div className="space-y-2">
-                {mockRankings.slice(0, 10).map((player, idx) => (
-                  <div key={player.name} className="flex justify-between items-center py-2 border-b border-hawaii-border/30 last:border-b-0">
-                    <div className="flex items-center">
-                      <span className="text-hawaii-primary font-bold mr-3">#{idx + 1}</span>
-                      <span className="font-medium text-hawaii-muted">{player.name}</span>
+                {playersWithNames.length > 0 ? (
+                  playersWithNames.map((player, index) => (
+                    <div key={`${player.player_id}-${player.rating}`} className="flex justify-between items-center py-2 border-b border-hawaii-border/30 last:border-b-0">
+                      <div className="flex items-center">
+                        <span className="text-hawaii-primary font-bold mr-3">#{index + 1}</span>
+                        <span className="font-medium text-hawaii-muted">{player.display_name}</span>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <span className="text-hawaii-secondary font-semibold">{Math.round(player.rating)}</span>
+                        <span className="text-hawaii-muted text-sm">({player.wins}/{player.losses})</span>
+                      </div>
                     </div>
-                    <span className="text-hawaii-secondary font-semibold">{player.rating}</span>
+                  ))
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-hawaii-muted text-sm">No players found. Be the first to start rating battles!</p>
                   </div>
-                ))}
-          </div>
-              <div className="mt-3 text-center">
-            <Link
-                  href="/rankings"
-                  className="text-hawaii-secondary hover:text-hawaii-accent transition-colors font-semibold text-sm"
-            >
-                  View Full Rankings →
-            </Link>
-          </div>
-        </div>
+                )}
+                <div className="mt-3 text-center">
+                  <Link
+                    href="/rankings"
+                    className="text-hawaii-secondary hover:text-hawaii-accent transition-colors font-semibold text-sm"
+                  >
+                    View Full Rankings →
+                  </Link>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Upcoming Tournaments - Right Column */}
@@ -258,30 +266,30 @@ export default async function Home() {
                 Upcoming Tournaments
               </h2>
               <div className="space-y-3">
-              {tournamentsWithDetails && tournamentsWithDetails.length > 0 ? (
-                tournamentsWithDetails.map((tournament) => {
-                return (
-                    <div key={tournament.id} className="bg-card-bg-alt rounded-lg p-3 border border-hawaii-border hover:border-hawaii-primary/50 transition-colors">
-                      {/* Tournament Image */}
-                      {tournament.details.image && (
-                        <div className="mb-2">
-                          <TournamentImage
-                            src={tournament.details.image}
-                            alt={tournament.title}
-                            title={tournament.title}
-                          />
+                {tournamentsWithDetails && tournamentsWithDetails.length > 0 ? (
+                  tournamentsWithDetails.map((tournament) => {
+                    return (
+                      <div key={tournament.id} className="bg-card-bg-alt rounded-lg p-3 border border-hawaii-border hover:border-hawaii-primary/50 transition-colors">
+                        {/* Tournament Image */}
+                        {tournament.details.image && (
+                          <div className="mb-2">
+                            <TournamentImage
+                              src={tournament.details.image}
+                              alt={tournament.title}
+                              title={tournament.title}
+                            />
+                          </div>
+                        )}
+                        
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="font-bold text-base text-hawaii-primary line-clamp-1 font-monopol">{tournament.title}</h3>
+                          <span className="text-xs text-hawaii-muted bg-card-bg px-2 py-1 rounded">
+                            {tournament.details.date || new Date(tournament.created_at).toLocaleDateString()}
+                          </span>
                         </div>
-                      )}
-                      
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-bold text-base text-hawaii-primary line-clamp-1 font-monopol">{tournament.title}</h3>
-                        <span className="text-xs text-hawaii-muted bg-card-bg px-2 py-1 rounded">
-                          {tournament.details.date || new Date(tournament.created_at).toLocaleDateString()}
-                        </span>
-                    </div>
-                      
-                      {/* Tournament Details */}
-                      <div className="space-y-1 mb-2">
+                        
+                        {/* Tournament Details */}
+                        <div className="space-y-1 mb-2">
                           {tournament.details.email && (
                             <div className="flex items-center text-xs text-hawaii-muted">
                               <span className="font-semibold mr-2">📧</span>
@@ -297,34 +305,34 @@ export default async function Home() {
                           )}
                         </div>
                         
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-hawaii-muted">Tournament Organizer</span>
-                      {tournament.tournamentLink && (
-                        <Link
-                            href={tournament.tournamentLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-hawaii-muted">Tournament Organizer</span>
+                          {tournament.tournamentLink && (
+                            <Link
+                              href={tournament.tournamentLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
                               className="bg-hawaii-primary text-white px-3 py-1.5 rounded text-xs font-semibold hover:bg-hawaii-secondary transition-colors"
-                        >
+                            >
                               View Details
-                        </Link>
-                        )}
+                            </Link>
+                          )}
+                        </div>
                       </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-hawaii-muted mb-4">No tournaments found in database</p>
                   </div>
-                );
-                })
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-hawaii-muted mb-4">No tournaments found in database</p>
-                </div>
-              )}
+                )}
                 <div className="text-center pt-3">
-                <Link
-                  href="/tournaments"
+                  <Link
+                    href="/tournaments"
                     className="text-hawaii-secondary hover:text-hawaii-accent transition-colors font-semibold text-sm"
-                >
-                  View All Tournaments →
-                </Link>
+                  >
+                    View All Tournaments →
+                  </Link>
                 </div>
               </div>
             </div>
