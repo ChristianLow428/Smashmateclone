@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 
 interface Player {
   player_id: string
@@ -41,6 +41,42 @@ export default function AdminPage() {
     'smallleft14@gmail.com'
   ] // Add your admin emails here
 
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Fetch rankings
+      const rankingsResponse = await fetch('/api/rankings/online')
+      if (!rankingsResponse.ok) {
+        throw new Error('Failed to fetch rankings')
+      }
+      const rankingsData = await rankingsResponse.json()
+      setRankings(rankingsData)
+
+      // Fetch tournaments
+      const tournamentsResponse = await fetch('/api/tournaments')
+      if (!tournamentsResponse.ok) {
+        throw new Error('Failed to fetch tournaments')
+      }
+      const tournamentsData = await tournamentsResponse.json()
+      setTournaments(tournamentsData)
+
+      // Fetch users
+      const usersResponse = await fetch('/api/admin/users')
+      if (!usersResponse.ok) {
+        throw new Error('Failed to fetch users')
+      }
+      const usersData = await usersResponse.json()
+      setUsers(usersData)
+    } catch (err) {
+      console.error('Error fetching data:', err)
+      setError(err instanceof Error ? err.message : 'Failed to fetch data')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin')
@@ -54,46 +90,10 @@ export default function AdminPage() {
   }, [session, router])
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true)
-        setError(null)
-
-        // Fetch rankings
-        const rankingsResponse = await fetch('/api/rankings/online')
-        if (!rankingsResponse.ok) {
-          throw new Error('Failed to fetch rankings')
-        }
-        const rankingsData = await rankingsResponse.json()
-        setRankings(rankingsData)
-
-        // Fetch tournaments
-        const tournamentsResponse = await fetch('/api/tournaments')
-        if (!tournamentsResponse.ok) {
-          throw new Error('Failed to fetch tournaments')
-        }
-        const tournamentsData = await tournamentsResponse.json()
-        setTournaments(tournamentsData)
-
-        // Fetch users
-        const usersResponse = await fetch('/api/admin/users')
-        if (!usersResponse.ok) {
-          throw new Error('Failed to fetch users')
-        }
-        const usersData = await usersResponse.json()
-        setUsers(usersData)
-      } catch (err) {
-        console.error('Error fetching data:', err)
-        setError(err instanceof Error ? err.message : 'Failed to fetch data')
-      } finally {
-        setLoading(false)
-      }
-    }
-
     if (session?.user?.email && ADMIN_EMAILS.includes(session.user.email)) {
       fetchData()
     }
-  }, [session])
+  }, [session, fetchData])
 
   const handleDeleteRanking = async (playerId: string) => {
     try {
