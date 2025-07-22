@@ -22,30 +22,21 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { tournamentId } = await request.json()
+    console.log('Attempting to delete tournament:', tournamentId)
 
-    // Delete tournament matches first
-    const { error: matchesError } = await supabase
-      .from('tournament_matches')
-      .delete()
-      .eq('tournament_id', tournamentId)
+    // First check if tournament exists
+    const { data: existingTournament, error: checkError } = await supabase
+      .from('tournaments')
+      .select('id')
+      .eq('id', tournamentId)
+      .single()
 
-    if (matchesError) {
-      console.error('Error deleting tournament matches:', matchesError)
-      return NextResponse.json({ error: 'Failed to delete tournament matches' }, { status: 500 })
+    if (checkError) {
+      console.error('Error checking tournament existence:', checkError)
+      return NextResponse.json({ error: 'Tournament not found' }, { status: 404 })
     }
 
-    // Delete tournament participants
-    const { error: participantsError } = await supabase
-      .from('tournament_participants')
-      .delete()
-      .eq('tournament_id', tournamentId)
-
-    if (participantsError) {
-      console.error('Error deleting tournament participants:', participantsError)
-      return NextResponse.json({ error: 'Failed to delete tournament participants' }, { status: 500 })
-    }
-
-    // Delete tournament
+    // Delete tournament from tournaments table
     const { error: tournamentError } = await supabase
       .from('tournaments')
       .delete()
@@ -56,16 +47,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to delete tournament' }, { status: 500 })
     }
 
-    // Delete tournament from Discord messages table
-    const { error: messagesError } = await supabase
-      .from('messages')
-      .delete()
-      .eq('discord_message_id', tournamentId)
-
-    if (messagesError) {
-      console.error('Error deleting tournament messages:', messagesError)
-      // Don't fail if messages deletion fails
-    }
+    console.log('Tournament deleted successfully:', tournamentId)
 
     return NextResponse.json({ success: true })
   } catch (error) {

@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET() {
   try {
     // Use service role key for server-side operations
@@ -9,7 +12,7 @@ export async function GET() {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Get top 10 players by rating, excluding test accounts and requiring at least one game played
+    // Get top 10 players by rating, requiring at least one game played
     const { data: allRatings, error: ratingsError } = await supabase
       .from('player_ratings')
       .select('*')
@@ -38,11 +41,13 @@ export async function GET() {
       })
     )
     
-    // Add cache-busting headers
+    // Add stronger cache-busting headers
     const response = NextResponse.json(playersWithNames)
-    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0')
     response.headers.set('Pragma', 'no-cache')
     response.headers.set('Expires', '0')
+    response.headers.set('Surrogate-Control', 'no-store')
+    response.headers.set('CDN-Cache-Control', 'no-store')
     
     return response
   } catch (error) {

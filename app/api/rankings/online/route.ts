@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET() {
   try {
     console.log('=== Online Rankings API called ===')
@@ -46,11 +49,13 @@ export async function GET() {
 
     console.log('Final top 10 players with names:', playersWithNames)
     
-    // Add cache-busting headers
+    // Add stronger cache-busting headers
     const response = NextResponse.json(playersWithNames)
-    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0')
     response.headers.set('Pragma', 'no-cache')
     response.headers.set('Expires', '0')
+    response.headers.set('Surrogate-Control', 'no-store')
+    response.headers.set('CDN-Cache-Control', 'no-store')
     
     return response
   } catch (error) {
