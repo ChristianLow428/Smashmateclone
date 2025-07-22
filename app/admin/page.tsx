@@ -109,7 +109,11 @@ export default function AdminPage() {
         throw new Error('Failed to delete ranking')
       }
 
+      // Remove from local state
       setRankings(rankings.filter(player => player.player_id !== playerId))
+
+      // Refresh data
+      fetchData()
     } catch (err) {
       console.error('Error deleting ranking:', err)
       setError(err instanceof Error ? err.message : 'Failed to delete ranking')
@@ -130,7 +134,11 @@ export default function AdminPage() {
         throw new Error('Failed to delete tournament')
       }
 
+      // Remove from local state
       setTournaments(tournaments.filter(tournament => tournament.id !== tournamentId))
+
+      // Refresh data
+      fetchData()
     } catch (err) {
       console.error('Error deleting tournament:', err)
       setError(err instanceof Error ? err.message : 'Failed to delete tournament')
@@ -151,7 +159,11 @@ export default function AdminPage() {
         throw new Error('Failed to delete user')
       }
 
+      // Remove from local state
       setUsers(users.filter(user => user.id !== userId))
+
+      // Refresh data
+      fetchData()
     } catch (err) {
       console.error('Error deleting user:', err)
       setError(err instanceof Error ? err.message : 'Failed to delete user')

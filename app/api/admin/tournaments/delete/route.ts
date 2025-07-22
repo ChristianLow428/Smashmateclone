@@ -23,6 +23,28 @@ export async function DELETE(request: NextRequest) {
 
     const { tournamentId } = await request.json()
 
+    // Delete tournament matches first
+    const { error: matchesError } = await supabase
+      .from('tournament_matches')
+      .delete()
+      .eq('tournament_id', tournamentId)
+
+    if (matchesError) {
+      console.error('Error deleting tournament matches:', matchesError)
+      return NextResponse.json({ error: 'Failed to delete tournament matches' }, { status: 500 })
+    }
+
+    // Delete tournament participants
+    const { error: participantsError } = await supabase
+      .from('tournament_participants')
+      .delete()
+      .eq('tournament_id', tournamentId)
+
+    if (participantsError) {
+      console.error('Error deleting tournament participants:', participantsError)
+      return NextResponse.json({ error: 'Failed to delete tournament participants' }, { status: 500 })
+    }
+
     // Delete tournament
     const { error: tournamentError } = await supabase
       .from('tournaments')
@@ -32,6 +54,17 @@ export async function DELETE(request: NextRequest) {
     if (tournamentError) {
       console.error('Error deleting tournament:', tournamentError)
       return NextResponse.json({ error: 'Failed to delete tournament' }, { status: 500 })
+    }
+
+    // Delete tournament from Discord messages table
+    const { error: messagesError } = await supabase
+      .from('messages')
+      .delete()
+      .eq('discord_message_id', tournamentId)
+
+    if (messagesError) {
+      console.error('Error deleting tournament messages:', messagesError)
+      // Don't fail if messages deletion fails
     }
 
     return NextResponse.json({ success: true })

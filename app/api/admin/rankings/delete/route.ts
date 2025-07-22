@@ -23,6 +23,28 @@ export async function DELETE(request: NextRequest) {
 
     const { playerId } = await request.json()
 
+    // Delete player's rating history first
+    const { error: historyError } = await supabase
+      .from('rating_history')
+      .delete()
+      .or(`player_id.eq.${playerId},opponent_id.eq.${playerId}`)
+
+    if (historyError) {
+      console.error('Error deleting player rating history:', historyError)
+      return NextResponse.json({ error: 'Failed to delete player rating history' }, { status: 500 })
+    }
+
+    // Delete player's match history
+    const { error: matchesError } = await supabase
+      .from('matches')
+      .delete()
+      .or(`player1_id.eq.${playerId},player2_id.eq.${playerId}`)
+
+    if (matchesError) {
+      console.error('Error deleting player matches:', matchesError)
+      // Don't fail if matches deletion fails
+    }
+
     // Delete player's ratings
     const { error: ratingsError } = await supabase
       .from('player_ratings')
@@ -32,17 +54,6 @@ export async function DELETE(request: NextRequest) {
     if (ratingsError) {
       console.error('Error deleting player ratings:', ratingsError)
       return NextResponse.json({ error: 'Failed to delete player ratings' }, { status: 500 })
-    }
-
-    // Delete player's rating history
-    const { error: historyError } = await supabase
-      .from('rating_history')
-      .delete()
-      .eq('player_id', playerId)
-
-    if (historyError) {
-      console.error('Error deleting player rating history:', historyError)
-      return NextResponse.json({ error: 'Failed to delete player rating history' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })
