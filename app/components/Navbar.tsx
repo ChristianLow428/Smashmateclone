@@ -47,6 +47,11 @@ export default function Navbar() {
     };
   }, [session?.user?.email, session?.user?.name]);
 
+  // List of admin emails
+  const ADMIN_EMAILS = ['christianlow428@gmail.com'] // Add your admin emails here
+
+  const isAdmin = session?.user?.email && ADMIN_EMAILS.includes(session.user.email)
+
   return (
     <nav className="bg-card-bg border-b border-hawaii-border shadow-lg">
       <div className="max-w-7xl mx-auto px-4">
@@ -73,6 +78,11 @@ export default function Navbar() {
             <Link href="/about" className="text-hawaii-muted hover:text-hawaii-accent transition-colors font-medium">
               About
             </Link>
+            {isAdmin && (
+              <Link href="/admin" className="text-hawaii-accent hover:text-hawaii-primary transition-colors font-medium">
+                Admin
+              </Link>
+            )}
           </div>
 
           {/* Login/Logout Buttons - Desktop */}
@@ -124,46 +134,76 @@ export default function Navbar() {
         {isMenuOpen && (
           <div className="md:hidden bg-card-bg-alt border-t border-hawaii-border">
             <div className="px-2 pt-2 pb-3 space-y-1">
-              <Link href="/free-battle" className="block px-3 py-2 text-hawaii-muted hover:text-hawaii-accent transition-colors font-medium">
+              <Link
+                href="/free-battle"
+                className="block text-hawaii-muted hover:text-hawaii-accent transition-colors py-2"
+                onClick={() => setIsMenuOpen(false)}
+              >
                 Free Battle
               </Link>
-              <Link href="/rating-battle" className="block px-3 py-2 text-hawaii-muted hover:text-hawaii-accent transition-colors font-medium">
+              <Link
+                href="/rating-battle"
+                className="block text-hawaii-muted hover:text-hawaii-accent transition-colors py-2"
+                onClick={() => setIsMenuOpen(false)}
+              >
                 Rating Battle
               </Link>
-              <Link href="/tournaments" className="block px-3 py-2 text-hawaii-muted hover:text-hawaii-accent transition-colors font-medium">
+              <Link
+                href="/tournaments"
+                className="block text-hawaii-muted hover:text-hawaii-accent transition-colors py-2"
+                onClick={() => setIsMenuOpen(false)}
+              >
                 Tournaments
               </Link>
-              <Link href="/rankings" className="block px-3 py-2 text-hawaii-muted hover:text-hawaii-accent transition-colors font-medium">
+              <Link
+                href="/rankings"
+                className="block text-hawaii-muted hover:text-hawaii-accent transition-colors py-2"
+                onClick={() => setIsMenuOpen(false)}
+              >
                 Rankings
               </Link>
-              <Link href="/about" className="block px-3 py-2 text-hawaii-muted hover:text-hawaii-accent transition-colors font-medium">
+              <Link
+                href="/about"
+                className="block text-hawaii-muted hover:text-hawaii-accent transition-colors py-2"
+                onClick={() => setIsMenuOpen(false)}
+              >
                 About
               </Link>
-              <div className="pt-4 pb-3 border-t border-hawaii-border">
-                {status === 'loading' ? null : session ? (
-                  <>
-                    <Link 
-                      href="/profile" 
-                      className="block text-hawaii-muted hover:text-hawaii-accent transition-colors mb-2 font-medium"
-                    >
-                      {displayName || session.user?.name || session.user?.email}
-                    </Link>
-                    <button
-                      className="w-full bg-card-bg text-hawaii-muted px-4 py-2 rounded hover:bg-hawaii-primary hover:text-white transition-colors font-medium"
-                      onClick={() => signOut()}
-                    >
-                      Logout
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    className="w-full bg-hawaii-primary text-white px-4 py-2 rounded hover:bg-hawaii-secondary transition-colors font-medium"
-                    onClick={() => signIn('google')}
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className="block text-hawaii-accent hover:text-hawaii-primary transition-colors py-2"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Admin
+                </Link>
+              )}
+            </div>
+
+            <div className="pt-4 pb-3 border-t border-hawaii-border">
+              {status === 'loading' ? null : session ? (
+                <>
+                  <Link 
+                    href="/profile" 
+                    className="block text-hawaii-muted hover:text-hawaii-accent transition-colors mb-2 font-medium"
                   >
-                    Login with Google
+                    {displayName || session.user?.name || session.user?.email}
+                  </Link>
+                  <button
+                    className="w-full bg-card-bg text-hawaii-muted px-4 py-2 rounded hover:bg-hawaii-primary hover:text-white transition-colors font-medium"
+                    onClick={() => signOut()}
+                  >
+                    Logout
                   </button>
-                )}
-              </div>
+                </>
+              ) : (
+                <button
+                  className="w-full bg-hawaii-primary text-white px-4 py-2 rounded hover:bg-hawaii-secondary transition-colors font-medium"
+                  onClick={() => signIn('google')}
+                >
+                  Login with Google
+                </button>
+              )}
             </div>
           </div>
         )}

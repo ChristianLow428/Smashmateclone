@@ -33,6 +33,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'rankings' | 'tournaments' | 'users'>('rankings')
 
   // List of admin emails
   const ADMIN_EMAILS = ['christianlow428@gmail.com'] // Add your admin emails here
@@ -182,77 +183,129 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* Rankings Section */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold mb-4 text-hawaii-accent font-monopol">Online Rankings</h2>
-          <div className="bg-card-bg rounded-lg shadow-lg border border-hawaii-border p-4">
-            <div className="space-y-4">
-              {rankings.map((player) => (
-                <div key={player.player_id} className="flex items-center justify-between bg-card-bg-alt rounded-lg p-4 border border-hawaii-border">
-                  <div>
-                    <div className="font-semibold text-hawaii-primary">{player.display_name}</div>
-                    <div className="text-sm text-hawaii-muted">
-                      Rating: {player.rating} • Games: {player.games_played} • W/L: {player.wins}/{player.losses}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleDeleteRanking(player.player_id)}
-                    className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition-colors text-sm"
-                  >
-                    Delete
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
+        {/* Tab Navigation */}
+        <div className="flex space-x-4 mb-8">
+          <button
+            onClick={() => setActiveTab('rankings')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              activeTab === 'rankings'
+                ? 'bg-hawaii-primary text-white'
+                : 'bg-card-bg-alt text-hawaii-muted hover:text-hawaii-accent'
+            }`}
+          >
+            Rankings
+          </button>
+          <button
+            onClick={() => setActiveTab('tournaments')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              activeTab === 'tournaments'
+                ? 'bg-hawaii-primary text-white'
+                : 'bg-card-bg-alt text-hawaii-muted hover:text-hawaii-accent'
+            }`}
+          >
+            Tournaments
+          </button>
+          <button
+            onClick={() => setActiveTab('users')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              activeTab === 'users'
+                ? 'bg-hawaii-primary text-white'
+                : 'bg-card-bg-alt text-hawaii-muted hover:text-hawaii-accent'
+            }`}
+          >
+            Users
+          </button>
         </div>
 
-        {/* Tournaments Section */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold mb-4 text-hawaii-accent font-monopol">Tournaments</h2>
-          <div className="bg-card-bg rounded-lg shadow-lg border border-hawaii-border p-4">
-            <div className="space-y-4">
-              {tournaments.map((tournament) => (
-                <div key={tournament.id} className="flex items-center justify-between bg-card-bg-alt rounded-lg p-4 border border-hawaii-border">
-                  <div>
-                    <div className="font-semibold text-hawaii-primary">{tournament.title}</div>
-                    <div className="text-sm text-hawaii-muted">
-                      Created: {new Date(tournament.created_at).toLocaleDateString()}
+        {/* Content Sections */}
+        <div className="bg-card-bg rounded-lg shadow-lg border border-hawaii-border p-6">
+          {/* Rankings Section */}
+          {activeTab === 'rankings' && (
+            <div>
+              <h2 className="text-2xl font-bold mb-4 text-hawaii-accent font-monopol">Online Rankings</h2>
+              <div className="space-y-4">
+                {rankings.map((player) => (
+                  <div key={player.player_id} className="flex items-center justify-between bg-card-bg-alt rounded-lg p-4 border border-hawaii-border">
+                    <div>
+                      <div className="font-semibold text-hawaii-primary">{player.display_name}</div>
+                      <div className="text-sm text-hawaii-muted">
+                        Rating: {player.rating} • Games: {player.games_played} • W/L: {player.wins}/{player.losses}
+                      </div>
                     </div>
+                    <button
+                      onClick={() => handleDeleteRanking(player.player_id)}
+                      className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition-colors text-sm"
+                    >
+                      Delete
+                    </button>
                   </div>
-                  <button
-                    onClick={() => handleDeleteTournament(tournament.id)}
-                    className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition-colors text-sm"
-                  >
-                    Delete
-                  </button>
-                </div>
-              ))}
+                ))}
+                {rankings.length === 0 && (
+                  <div className="text-center py-8 text-hawaii-muted">
+                    No rankings found
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </div>
+          )}
 
-        {/* Users Section */}
-        <div>
-          <h2 className="text-2xl font-bold mb-4 text-hawaii-accent font-monopol">Users</h2>
-          <div className="bg-card-bg rounded-lg shadow-lg border border-hawaii-border p-4">
-            <div className="space-y-4">
-              {users.map((user) => (
-                <div key={user.id} className="flex items-center justify-between bg-card-bg-alt rounded-lg p-4 border border-hawaii-border">
-                  <div>
-                    <div className="font-semibold text-hawaii-primary">{user.name || user.email}</div>
-                    <div className="text-sm text-hawaii-muted">{user.email}</div>
+          {/* Tournaments Section */}
+          {activeTab === 'tournaments' && (
+            <div>
+              <h2 className="text-2xl font-bold mb-4 text-hawaii-accent font-monopol">Tournaments</h2>
+              <div className="space-y-4">
+                {tournaments.map((tournament) => (
+                  <div key={tournament.id} className="flex items-center justify-between bg-card-bg-alt rounded-lg p-4 border border-hawaii-border">
+                    <div>
+                      <div className="font-semibold text-hawaii-primary">{tournament.title}</div>
+                      <div className="text-sm text-hawaii-muted">
+                        Created: {new Date(tournament.created_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteTournament(tournament.id)}
+                      className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition-colors text-sm"
+                    >
+                      Delete
+                    </button>
                   </div>
-                  <button
-                    onClick={() => handleDeleteUser(user.id)}
-                    className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition-colors text-sm"
-                  >
-                    Delete
-                  </button>
-                </div>
-              ))}
+                ))}
+                {tournaments.length === 0 && (
+                  <div className="text-center py-8 text-hawaii-muted">
+                    No tournaments found
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Users Section */}
+          {activeTab === 'users' && (
+            <div>
+              <h2 className="text-2xl font-bold mb-4 text-hawaii-accent font-monopol">Users</h2>
+              <div className="space-y-4">
+                {users.map((user) => (
+                  <div key={user.id} className="flex items-center justify-between bg-card-bg-alt rounded-lg p-4 border border-hawaii-border">
+                    <div>
+                      <div className="font-semibold text-hawaii-primary">{user.name || user.email}</div>
+                      <div className="text-sm text-hawaii-muted">{user.email}</div>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteUser(user.id)}
+                      className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition-colors text-sm"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ))}
+                {users.length === 0 && (
+                  <div className="text-center py-8 text-hawaii-muted">
+                    No users found
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </main>
