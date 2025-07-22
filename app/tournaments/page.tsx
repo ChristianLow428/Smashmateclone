@@ -1,4 +1,4 @@
-import { supabaseServer } from '../utils/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import TournamentImage from '../components/TournamentImage';
@@ -187,7 +187,13 @@ async function getTournamentDetails(url: string): Promise<TournamentDetails> {
 export const dynamic = 'force-dynamic';
 
 export default async function TournamentsPage() {
-  const { data: tournaments, error } = await supabaseServer
+  // Use service role key for server-side operations
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  const { data: tournaments, error } = await supabase
     .from('tournaments')
     .select('*')
     .order('created_at', { ascending: false });
@@ -209,11 +215,25 @@ export default async function TournamentsPage() {
     );
   }
 
-  // Fetch additional details for each tournament
+  // Fetch additional details for each tournament (with timeout and error handling)
   const tournamentsWithDetails = await Promise.all(
     tournaments?.map(async (tournament: Tournament) => {
       const tournamentLink = findFirstUrl(tournament.description || '');
-      const details = tournamentLink ? await getTournamentDetails(tournamentLink) : {};
+      let details = {};
+      
+      if (tournamentLink) {
+        try {
+          // Add timeout to prevent hanging
+          const timeoutPromise = new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout')), 5000)
+          );
+          const detailsPromise = getTournamentDetails(tournamentLink);
+          details = await Promise.race([detailsPromise, timeoutPromise]);
+        } catch (error) {
+          console.log(`Failed to fetch details for ${tournament.title}:`, error instanceof Error ? error.message : 'Unknown error');
+          details = {};
+        }
+      }
       
       return {
         ...tournament,
@@ -237,9 +257,9 @@ export default async function TournamentsPage() {
           return (
               <div key={tournament.id} className="bg-card-bg rounded-lg shadow-lg border border-hawaii-border p-6 flex flex-col h-full hover:border-hawaii-primary transition-colors">
                 {/* Tournament Image */}
-                {tournament.details.image && (
+                {(tournament.details as any)?.image && (
                   <TournamentImage
-                    src={tournament.details.image}
+                    src={(tournament.details as any).image}
                     alt={tournament.title}
                     title={tournament.title}
                   />
@@ -250,24 +270,24 @@ export default async function TournamentsPage() {
                   
                   {/* Tournament Details */}
                   <div className="space-y-2 mb-4">
-                    {tournament.details.date && (
+                    {(tournament.details as any)?.date && (
                       <div className="flex items-center text-sm text-hawaii-muted">
                         <span className="font-semibold mr-2">📅</span>
-                        {tournament.details.date}
+                        {(tournament.details as any).date}
                       </div>
                     )}
                     
-                    {tournament.details.email && (
+                    {(tournament.details as any)?.email && (
                       <div className="flex items-center text-sm text-hawaii-muted">
                         <span className="font-semibold mr-2">📧</span>
-                        {tournament.details.email}
+                        {(tournament.details as any).email}
                       </div>
                     )}
                     
-                    {tournament.details.location && (
+                    {(tournament.details as any)?.location && (
                       <div className="flex items-center text-sm text-hawaii-muted">
                         <span className="font-semibold mr-2">📍</span>
-                        {tournament.details.location}
+                        {(tournament.details as any).location}
                       </div>
                     )}
                   </div>

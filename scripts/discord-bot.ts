@@ -258,7 +258,7 @@ async function syncTournaments() {
   if (tournamentChannel && tournamentChannel.isTextBased()) {
     const tournamentMessages = await tournamentChannel.messages.fetch({ limit: 100 });
     
-    // Only include message IDs that contain valid tournament URLs
+    // Include message IDs that contain valid tournament URLs
     const validTournamentMessageIds: string[] = [];
     
     for (const [messageId, message] of tournamentMessages) {
@@ -318,10 +318,13 @@ async function syncTournaments() {
 client.once('ready', async () => {
   console.log(`Logged in as ${client.user?.tag}!`);
 
-  // --- Existing: Process tournaments channel ---
+  // --- Process tournaments channel ---
   const tournamentChannel = await client.channels.fetch(config.discord.tournamentChannelId);
   if (tournamentChannel && tournamentChannel.isTextBased()) {
     const tournamentMessages = await tournamentChannel.messages.fetch({ limit: 100 });
+    
+    console.log(`Processing ${tournamentMessages.size} messages from tournament channel`);
+    
     tournamentMessages.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
     tournamentMessages.forEach(async (message) => {
       await processMessage(message);

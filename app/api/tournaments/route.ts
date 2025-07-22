@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // Function to find the first URL in text
 function findFirstUrl(text: string): string | null {
   const urlRegex = /(https?:\/\/[^\s<>"]+)/g;
@@ -138,6 +141,8 @@ async function getTournamentDetails(url: string) {
 
 export async function GET() {
   try {
+    console.log('=== Tournaments API called ===')
+    
     // Use service role key for server-side operations
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -150,6 +155,8 @@ export async function GET() {
       .select('*')
       .order('created_at', { ascending: false })
       .limit(3)
+
+    console.log('Tournaments from DB:', tournaments)
 
     if (tournamentsError) {
       console.error('Error fetching tournaments:', tournamentsError)
@@ -169,12 +176,16 @@ export async function GET() {
         };
       }) || []
     )
+
+    console.log('Final tournaments with details:', tournamentsWithDetails)
     
-    // Add cache-busting headers
+    // Add stronger cache-busting headers
     const response = NextResponse.json(tournamentsWithDetails)
-    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0')
     response.headers.set('Pragma', 'no-cache')
     response.headers.set('Expires', '0')
+    response.headers.set('Surrogate-Control', 'no-store')
+    response.headers.set('CDN-Cache-Control', 'no-store')
     
     return response
   } catch (error) {

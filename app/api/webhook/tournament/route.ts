@@ -91,14 +91,30 @@ export async function DELETE(request: Request) {
     console.log(`Cleaning up tournaments. Keeping message IDs: ${messageIds.join(', ')}`);
 
     // Delete tournaments that aren't in the provided message IDs
-    const { error } = await supabase
+    // First, get all tournaments that should be deleted
+    const { data: tournamentsToDelete, error: selectError } = await supabase
       .from('tournaments')
-      .delete()
+      .select('id')
       .not('discord_message_id', 'in', `(${messageIds.map(id => `'${id}'`).join(',')})`);
-
-    if (error) {
-      console.error('Error deleting old tournaments:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    
+    if (selectError) {
+      console.error('Error selecting tournaments to delete:', selectError);
+      return NextResponse.json({ error: selectError.message }, { status: 500 });
+    }
+    
+    if (tournamentsToDelete && tournamentsToDelete.length > 0) {
+      const idsToDelete = tournamentsToDelete.map(t => t.id);
+      console.log(`Deleting ${idsToDelete.length} tournaments:`, idsToDelete);
+      
+      const { error } = await supabase
+        .from('tournaments')
+        .delete()
+        .in('id', idsToDelete);
+      
+      if (error) {
+        console.error('Error deleting tournaments:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
     }
 
     console.log('Old tournaments cleaned up successfully');

@@ -271,25 +271,6 @@ export default function RatingBattle() {
             setLastRatingChange(null)
           }, 10000)
           
-          // Show rating change notification
-          const notification = document.createElement('div')
-          notification.className = `fixed top-4 right-4 p-4 rounded-lg text-white font-bold z-50 ${
-            ratingChange >= 0 ? 'bg-green-500' : 'bg-red-500'
-          }`
-          notification.innerHTML = `
-            <div class="text-lg">${ratingChange >= 0 ? 'Rating Increased!' : 'Rating Decreased'}</div>
-            <div class="text-sm">${oldRating} → ${newRating}</div>
-            <div class="text-sm">${ratingChange >= 0 ? '+' : ''}${ratingChange}</div>
-          `
-          document.body.appendChild(notification)
-          
-          // Remove notification after 5 seconds
-          setTimeout(() => {
-            if (notification.parentNode) {
-              notification.parentNode.removeChild(notification)
-            }
-          }, 5000)
-          
           // Force reload player rating from database
           setTimeout(() => {
             loadPlayerRating()

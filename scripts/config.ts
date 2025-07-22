@@ -1,8 +1,8 @@
 import { config as dotenvConfig } from 'dotenv';
 import { resolve } from 'path';
 
-// Load environment variables from the root .env.local file
-dotenvConfig({ path: resolve(__dirname, '../.env.local') });
+// Load environment variables from the root .env file (production environment)
+dotenvConfig({ path: resolve(__dirname, '../.env') });
 
 // Validate required environment variables
 const requiredEnvVars = [
