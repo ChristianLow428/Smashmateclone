@@ -36,7 +36,10 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<'rankings' | 'tournaments' | 'users'>('rankings')
 
   // List of admin emails
-  const ADMIN_EMAILS = ['christianlow428@gmail.com'] // Add your admin emails here
+  const ADMIN_EMAILS = [
+    'christianlow428@gmail.com',
+    'smallleft14@gmail.com'
+  ] // Add your admin emails here
 
   useEffect(() => {
     if (status === 'unauthenticated') {

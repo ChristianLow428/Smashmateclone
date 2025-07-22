@@ -3,7 +3,10 @@ import { createClient } from '@supabase/supabase-js'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../../auth/[...nextauth]/options'
 
-const ADMIN_EMAILS = ['christianlow428@gmail.com'] // Add your admin emails here
+const ADMIN_EMAILS = [
+  'christianlow428@gmail.com',
+  'smallleft14@gmail.com'
+] // Add your admin emails here
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

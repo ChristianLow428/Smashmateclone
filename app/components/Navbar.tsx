@@ -48,7 +48,10 @@ export default function Navbar() {
   }, [session?.user?.email, session?.user?.name]);
 
   // List of admin emails
-  const ADMIN_EMAILS = ['christianlow428@gmail.com'] // Add your admin emails here
+  const ADMIN_EMAILS = [
+    'christianlow428@gmail.com',
+    'smallleft14@gmail.com'
+  ] // Add your admin emails here
 
   const isAdmin = session?.user?.email && ADMIN_EMAILS.includes(session.user.email)
 
