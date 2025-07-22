@@ -9,11 +9,11 @@ export async function GET() {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Get top 10 players by rating, excluding test accounts
+    // Get top 10 players by rating, excluding test accounts and requiring at least one game played
     const { data: allRatings, error: ratingsError } = await supabase
       .from('player_ratings')
       .select('*')
-      .not('player_id', 'in', ['test', 'Player', 'Greetings'])
+      .gt('games_played', 0) // Only show players who have played at least one game
       .order('rating', { ascending: false })
       .limit(10)
 
